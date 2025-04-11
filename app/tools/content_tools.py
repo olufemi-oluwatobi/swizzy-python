@@ -884,3 +884,30 @@ def extract_text_from_image(file_handle: str, extraction_type: str = "text") -> 
     except Exception as e:
         logger.exception(f"Error extracting {extraction_type} from image {file_handle}: {e}")
         return f"Error extracting {extraction_type} from image: {e}"
+
+@function_tool
+def create_markdown(text: str) -> str:
+    """
+    Creates a markdown string with the input as a heading 1.
+
+    Args:
+        text: The text to be used as the heading.
+
+    Returns:
+        A markdown string with the input as a heading 1.
+    """
+    return f"# {text}"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
