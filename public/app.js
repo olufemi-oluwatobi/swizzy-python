@@ -6,11 +6,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const responseDisplayArea = document.getElementById('response-display-area');
     const memoryStateArea = document.getElementById('memory-state-area');
     const fileList = document.getElementById('file-list');
+    const dropZone = document.getElementById('drop-zone');
 
     let files = [];
 
     fileInput.addEventListener('change', (event) => {
-        files = Array.from(event.target.files);
+        files = [...files, ...Array.from(event.target.files)];
+        updateFileList();
+        fileInput.value = null; // Clear the input after adding files
+    });
+
+    dropZone.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (event) => {
+        event.preventDefault();
+        dropZone.classList.remove('dragover');
+        const droppedFiles = Array.from(event.dataTransfer.files);
+        files = [...files, ...droppedFiles];
         updateFileList();
     });
 
