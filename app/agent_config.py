@@ -14,7 +14,6 @@ from .swizzy_tools import (
     create_document,
     extract_text_from_image,
     ponder_document_request,
-    read_markdown,
     create_markdown,
     edit_markdown_section,
     convert_file_format,
@@ -115,10 +114,6 @@ async def swizzy_consistency_guardrail(
 
     if isinstance(output, str):
         logger.info("Swizzy Consistency Guardrail received string output, attempting to parse JSON.")
-        
-            # Clean potential markdown fences
-            json_str = output.strip()
-            if json_str.startswith("```json"):
                 json_str = json_str[7:]
             if json_str.endswith("```"):
                 json_str = json_str[:-3]
