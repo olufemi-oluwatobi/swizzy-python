@@ -80,10 +80,10 @@ def read_file_content(file_handle: str) -> str:
         # Determine file type based on extension
         file_extension = os.path.splitext(file_handle)[1].lower()
         
-        if file_extension == '.txt':
-            # For text files, decode as UTF-8
+        if file_extension in ['.txt', '.md']:
+            # For text and markdown files, decode as UTF-8
             text_content = file_bytes.decode('utf-8', errors='replace')
-            logger.info(f"Successfully read TXT content from handle: {file_handle}")
+            logger.info(f"Successfully read {file_extension} content from handle: {file_handle}")
         
         elif file_extension == '.pdf':
             # For PDF files, use PyPDF to extract text
@@ -141,7 +141,7 @@ def read_file_content(file_handle: str) -> str:
 
         else:
             logger.warning(f"Unsupported file type '{file_extension}' for handle: {file_handle}")
-            return f"Unsupported file type: {file_extension}. Please provide a .txt, .pdf, .docx, .xlsx, or .csv file."
+            return f"Unsupported file type: {file_extension}. Please provide a .txt, .md, .pdf, .docx, .xlsx, or .csv file."
         
         return text_content
     

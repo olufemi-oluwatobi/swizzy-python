@@ -193,7 +193,7 @@ def convert_markdown_to_docx(markdown_content: str) -> bytes:
                         frontmatter[key.strip()] = value.strip()
                 
                 # Remove frontmatter from content
-                markdown_content = markdown_content[end_index+3:].strip()
+                markdown_content = markdown_content[end_index+3:].trip()
         
         # Set document properties from frontmatter
         if 'title' in frontmatter:
@@ -378,28 +378,59 @@ def extract_pdf_content_with_formatting(pdf_bytes: bytes) -> str:
                 elif block["type"] == 1:  # Image block
                     image_count += 1
                     image_name = f"image_{page_num + 1}_{image_count}.png"
+                    image = None
                     
-                    # Extract image
                     try:
-                        xref = block["xref"]
-                        image = pdf_document.extract_image(xref)
-                        if image:
-                            # For now, we'll just reference the image
-                            # In a real implementation, we would save the image and provide a link
-                            md_lines.append(f"![Image {image_count} on page {page_num + 1}]({image_name})")
+                        # First attempt - using block xref if available
+                        if "xref" in block:
+                            xref = block["xref"]
+                            image = pdf_document.extract_image(xref)
+                        
+                        if not image:
+                            # Second attempt - try getting pixmap from block
+                            pix = page.get_pixmap(matrix=fitz.Matrix(1, 1))
+                            if pix:
+                                image = {
+                                    "image": pix.tobytes(),
+                                    "ext": "png"
+                                }
+                        
+                        if not image:
+                            # Third attempt - get all images from page
+                            all_images = page.get_images()
+                            if all_images:
+                                img_item = all_images[0]  # Get first image
+                                image = {
+                                    "image": pdf_document.extract_stream(img_item[0]),
+                                    "ext": img_item[1].lower().replace("image/", "") if img_item[1] else "png"
+                                }
+                        
+                        if image and image.get("image"):
+                            # Save image using storage service
+                            image_bytes = image["image"]
+                            image_handle = storage_service.upload_file(image_name, image_bytes)
+                            
+                            # Use the storage handle for markdown link
+                            md_lines.append(f"![Image {image_count} on page {page_num + 1}]({image_handle})")
                             md_lines.append("")
                             
-                            # Store image reference
+                            # Store image reference with handle
                             image_references.append({
                                 "name": image_name,
                                 "page": page_num + 1,
-                                "xref": xref
+                                "handle": image_handle,
+                                "format": image.get("ext", "unknown")
                             })
+                        else:
+                            logger.warning(f"No valid image data found in block on page {page_num + 1}")
+                            md_lines.append(f"[Image {image_count} on page {page_num + 1}]")
+                            md_lines.append("")
+                            
                     except Exception as e:
-                        logger.warning(f"Failed to extract image: {e}")
+                        logger.warning(f"Failed to extract image on page {page_num + 1}. Error: {e}")
                         md_lines.append(f"[Image {image_count} on page {page_num + 1}]")
                         md_lines.append("")
-            
+
             # Extract tables from the page
             tables = page.find_tables()
             if tables:
@@ -550,36 +581,38 @@ def convert_to_markdown(file_handle: str, output_filename: str = "") -> str:
 @function_tool
 def read_markdown(file_handle: str) -> str:
     """
-    Reads a markdown file and returns its content.
+    Reads a markdown or text file and returns its content.
     
     Args:
         file_handle: The handle of the file to read
         
     Returns:
-        The content of the markdown file
+        The content of the file as a string
     """
-    logger.info(f"Reading markdown file: {file_handle}")
+    logger.info(f"Reading file: {file_handle}")
     
     try:
         # Get the file bytes
         file_bytes = storage_service.download_file(file_handle)
         
-        # Determine file type based on extension
-        file_extension = os.path.splitext(file_handle)[1].lower()
-        
-        if file_extension in ['.md', '.txt']:
-            # For markdown/text files, decode as UTF-8
+        try:
+            # First try UTF-8
+            content = file_bytes.decode('utf-8')
+        except UnicodeDecodeError:
+            # Fallback to UTF-8 with error handling
             content = file_bytes.decode('utf-8', errors='replace')
-            return content
-        else:
-            return f"Error: Unsupported file type: {file_extension}. Please provide a .md or .txt file, or use convert_to_markdown first."
+            logger.warning(f"File {file_handle} contains invalid UTF-8 characters, some content may be altered")
+            
+        return content
         
     except FileNotFoundError:
-        logger.error(f"File not found: {file_handle}")
-        return f"Error: File not found: {file_handle}"
+        error_msg = f"File not found: {file_handle}"
+        logger.error(error_msg)
+        return f"Error: {error_msg}"
     except Exception as e:
-        logger.exception(f"Error reading file {file_handle}: {e}")
-        return f"Error reading file: {e}"
+        error_msg = f"Error reading file {file_handle}: {str(e)}"
+        logger.exception(error_msg)
+        return f"Error: {error_msg}"
 
 def find_section_boundaries(content: str, section_identifier: str) -> Tuple[int, int]:
     """

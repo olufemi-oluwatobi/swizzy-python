@@ -125,6 +125,8 @@ async def process_task(
         # --- Log final context state ---
         logger.info(f"[Task {task_id}] Final action log: {task_context.action_log}")
 
+        print(task_context.action_log)
+
         # --- Response Handling ---
         if result and hasattr(result, "final_output") and result.final_output:
             response_data = {}
@@ -213,7 +215,7 @@ async def chat(
 
         logger.info(f"Runner returned: {result}")
 
-        # Check result type before accessing attributes
+        # Check result type before acce ssing attributes
         if result and hasattr(result, 'final_output') and result.final_output is not None:
             response_data = {}
             final_output = result.final_output
