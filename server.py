@@ -1,5 +1,6 @@
 import os
-
+import uuid
+from dataclasses import dataclass, field
 from logging import getLogger
 from typing import List, Annotated
 from dotenv import load_dotenv
@@ -8,14 +9,15 @@ from fastapi import FastAPI, Request, UploadFile, File as FastApiFile, Form, HTT
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from agents import Runner
+from fastapi.templating import Jinja2Templates 
+from agents import Runner, RunContextWrapper, function_tool # Added RunContextWrapper, function_tool
 
 # Load environment variables first, before any other imports
 load_dotenv()
 
 # Your application-specific imports
 from app.agent_config import starting_agent, memory_agent
+# Removed RunContextWrapper import from here as it's now imported from agents
 from app.services.storage_service import storage_service, FILE_STORE_DIRECTORY, PUBLIC_FILES_MOUNT_PATH
 
 # --- Constants ---
@@ -62,6 +64,27 @@ async def get_landing_page(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
+@dataclass
+class TaskContext:
+    """Context object to be passed through agent runs, holding task-specific info."""
+    task_id: str
+    action_log: List[str] = field(default_factory=list)
+
+
+# --- Context Tools Definition ---
+
+@function_tool
+async def get_task_id(wrapper: RunContextWrapper[TaskContext]) -> str:
+    """Returns the unique ID for the current task."""
+    return wrapper.context.task_id
+
+@function_tool
+async def log_action(wrapper: RunContextWrapper[TaskContext], action_description: str) -> str:
+    """Logs a description of an action performed by the agent into the task context."""
+    wrapper.context.action_log.append(action_description)
+    logger.info(f"[Task {wrapper.context.task_id}] Logged action: {action_description}")
+    return f"Action logged: {action_description}"
+
 # --- Process Task Endpoint (Handles Swizzy Agent Interaction) ---
 @app.post("/process_task")
 async def process_task(
@@ -75,43 +98,71 @@ async def process_task(
     """
     logger.info(f"Received task: {task}")
     uploaded_file_handles = []
+    task_context = None # Initialize to None
 
     try:
+        # --- Initialize Task Context with a Unique Task ID ---
+        task_id = str(uuid.uuid4())  # Generate a unique Task ID
+        task_context = TaskContext(task_id=task_id)
+        logger.info(f"Initialized TaskContext with ID: {task_id}")
+
         # --- File Handling ---
         if files:
             for file in files:
                 if file.filename:
                     safe_filename = os.path.basename(file.filename)
                     content = await file.read()
-                    file_handle = storage_service.upload_file(
+                    # File handle generation now happens within the agent tools using task_id
+                    # We still need to upload the *original* file for the agent to access
+                    # Let's use a temporary naming convention here or pass content directly if possible
+                    # For now, we upload with original name, agent tools will reference this
+                    # or create new files with task_id prefix.
+                    temp_file_handle = storage_service.upload_file(
                         file_identifier=safe_filename, file_content=content
                     )
-                    uploaded_file_handles.append(file_handle)
+                    uploaded_file_handles.append(temp_file_handle) # Pass original handle
                     logger.info(
-                        f"Uploaded file '{safe_filename}' with handle: {file_handle}"
+                        f"Uploaded temporary file '{safe_filename}' with handle: {temp_file_handle}"
                     )
+
 
         # --- Prepare Agent Input ---
         if uploaded_file_handles:
-            file_info = "\n\n[Attached Files: " + ", ".join(uploaded_file_handles) + "]"
+            # Pass the *original* file handles to the agent
+            file_info = "
+
+            [Attached Files: " + ", ".join(uploaded_file_handles) + "]"
             agent_input = task + file_info
         else:
             agent_input = task
         logger.info(f"Agent input: {agent_input}")
 
 
-        print(f"Running starting agent with input string: '{agent_input}'")
-        # --- Agent Interaction ---
-        result = await Runner.run(starting_agent, input=agent_input)
+        print(f"Running starting agent with input string: '{agent_input}' and Task ID: {task_id}")
+
+
+        # --- Agent Interaction (Pass the context) ---
+        result = await Runner.run(starting_agent, input=agent_input, context=task_context)
+
+        # --- Log final context state ---
+        logger.info(f"[Task {task_id}] Final action log: {task_context.action_log}")
 
         # --- Response Handling ---
         if result and hasattr(result, "final_output") and result.final_output:
-            response_data = {"response": result.final_output}
-            if hasattr(result.final_output, "file_link") and result.final_output.file_link:
-                response_data["file_link"] = result.final_output.file_link
-            elif isinstance(result.final_output, dict) and "file_link" in result.final_output:
-                response_data["file_link"] = result.final_output["file_link"]
-            response_data["response"] = result.final_output
+            response_data = {}
+            final_output = result.final_output
+            # Handle potential file link in the output
+            if hasattr(final_output, 'file_link') and final_output.file_link:
+                response_data["file_link"] = final_output.file_link
+            elif isinstance(final_output, dict) and "file_link" in final_output:
+                response_data["file_link"] = final_output["file_link"]
+            
+            # Set the main response text
+            if isinstance(final_output, dict):
+                 response_data["response"] = final_output.get("description", str(final_output))
+            else:
+                 response_data["response"] = str(final_output) # Convert to string if not dict
+
             logger.info(f"Agent response: {response_data}")
             return response_data
         else:
@@ -119,7 +170,9 @@ async def process_task(
             return {"response": "ok"}
 
     except Exception as e:
-        logger.exception(f"Error processing task or files: {e}")
+        # Include task_id in error logging if available
+        task_id_str = f"Task {task_context.task_id}: " if task_context else ""
+        logger.exception(f"{task_id_str}Error processing task or files: {e}")
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
 
@@ -138,7 +191,15 @@ async def chat(
     form_data = await request.form()
     message = form_data.get("message", "")
     uploaded_file_handles = []
+    task_context = None # Initialize to None
+
     try:
+        # --- Initialize Task Context with a Unique Task ID ---
+        task_id = str(uuid.uuid4())  # Generate a unique Task ID
+        task_context = TaskContext(task_id=task_id)
+        logger.info(f"Initialized TaskContext with ID: {task_id}")
+
+
         for file in files:
             if file.filename:
                 safe_filename = os.path.basename(file.filename)
@@ -146,44 +207,62 @@ async def chat(
                     continue
 
                 content = await file.read()
-                file_handle = storage_service.upload_file(file_identifier=safe_filename, file_content=content)
-                uploaded_file_handles.append(file_handle)
-                logger.info(f"Uploaded file '{safe_filename}' with handle: {file_handle}")
+                # Upload original file, agent tools will create task-specific versions if needed
+                temp_file_handle = storage_service.upload_file(file_identifier=safe_filename, file_content=content)
+                uploaded_file_handles.append(temp_file_handle) # Pass original handle
+                logger.info(f"Uploaded temporary file '{safe_filename}' with handle: {temp_file_handle}")
             else:
                 logger.debug("Skipping file upload due to empty filename.")
 
         # Prepare input for the agent runner as a single string
         if uploaded_file_handles:
-            # Append file handles to the message string
-            file_info = "\n\n[Attached Files: " + ", ".join(uploaded_file_handles) + "]"
+            # Append *original* file handles to the message string
+            file_info = "
+
+[Attached Files: " + ", ".join(uploaded_file_handles) + "]"
             agent_run_input = message + file_info
         else:
             # Just use the message if no files were uploaded
             agent_run_input = message
 
         # Log the actual input being sent to the runner.
-        logger.info(f"Running starting agent with input string: '{agent_run_input}'")
+        logger.info(f"Running starting agent with input string: '{agent_run_input}' and Task ID: {task_id}")
 
-        # --- Agent Execution (Handoffs handled internally by agents library) ---
-        # Simply run the starting agent. Handoffs will occur automatically if needed.
-        result = await Runner.run(starting_agent, input=agent_run_input)
+
+        # --- Agent Execution (Pass the context) ---
+        result = await Runner.run(starting_agent, input=agent_run_input, context=task_context)
+
+        # --- Log final context state ---
+        logger.info(f"[Task {task_id}] Final action log: {task_context.action_log}")
+
         logger.info(f"Runner returned: {result}")
 
         # Check result type before accessing attributes
         if result and hasattr(result, 'final_output') and result.final_output is not None:
-            response_data = {"response": result.final_output}
-            if hasattr(result.final_output, 'file_link') and result.final_output.file_link:
-                response_data["file_link"] = result.final_output.file_link
-            elif isinstance(result.final_output, dict) and "file_link" in result.final_output:
-                response_data["file_link"] = result.final_output["file_link"]
-            response_data["response"] = result.final_output.get("description", "Processed file.")
+            response_data = {}
+            final_output = result.final_output
+
+            # Handle potential file link in the output
+            if hasattr(final_output, 'file_link') and final_output.file_link:
+                response_data["file_link"] = final_output.file_link
+            elif isinstance(final_output, dict) and "file_link" in final_output:
+                response_data["file_link"] = final_output["file_link"]
+
+            # Set the main response text
+            if isinstance(final_output, dict):
+                 response_data["response"] = final_output.get("description", str(final_output))
+            else:
+                 response_data["response"] = str(final_output) # Convert to string if not dict
+
             logger.info(f"Response returned to user: {response_data}")
             return response_data
         else:
           logger.info("Empty response returned to user")
           return {"response": "ok"}
     except Exception as e:
-        logger.exception(f"Error processing message or files: {e}")
+        # Include task_id in error logging if available
+        task_id_str = f"Task {task_context.task_id}: " if task_context else ""
+        logger.exception(f"{task_id_str}Error processing message or files: {e}")
         raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {e}")
 
 
