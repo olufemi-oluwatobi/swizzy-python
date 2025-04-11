@@ -109,7 +109,7 @@ async def process_task(
                 response_data["file_link"] = result.final_output.file_link
             elif isinstance(result.final_output, dict) and "file_link" in result.final_output:
                 response_data["file_link"] = result.final_output["file_link"]
-            response_data["response"] = result.final_output.get("description", "Task processed.")
+            response_data["response"] = result.final_output
             logger.info(f"Agent response: {response_data}")
             return response_data
         else:
