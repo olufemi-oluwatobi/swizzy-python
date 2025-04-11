@@ -112,9 +112,9 @@ async def chat(
           response_data = {"response": result.final_output}
           if hasattr(result.final_output, 'file_link') and result.final_output.file_link:
               response_data["file_link"] = result.final_output.file_link
-          elif isinstance(result.final_output, dict) and "file_link" in result.final_output:
-            response_data["file_link"] = result.final_output["file_link"]
-              response_data["response"] = result.final_output.get("description", "Processed file.")
+          elif isinstance(result.final_output, dict) and "file_link" in result.final_output:              
+            response_data["file_link"] = result.final_output["file_link"]        
+          response_data["response"] = result.final_output.get("description", "Processed file.")
           logger.info(f"Response returned to user: {response_data}")
           return response_data
         else:
