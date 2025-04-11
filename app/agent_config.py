@@ -10,11 +10,10 @@ from agents import Agent, WebSearchTool, function_tool, OpenAIChatCompletionsMod
 from dotenv import load_dotenv
 
 from .swizzy_tools import (
-    read_file_content,
     create_document,
     extract_text_from_image,
     ponder_document_request,
-    edit_markdown_section,
+    read_file_content,
     convert_file_format,
     analyze_content_structure,
 )
@@ -22,7 +21,7 @@ from .tools import (
     analyze_spreadsheet,
     create_spreadsheet,
     modify_spreadsheet,
-    ponder_spreadsheet_request
+    ponder_spreadsheet_request,
 )
 from .tools.content_tools import (
     convert_pdf_to_markdown,
@@ -30,7 +29,6 @@ from .tools.content_tools import (
     read_markdown,
     create_markdown,
     edit_markdown_section,
-    convert_file_format,
     analyze_content_structure,
 )
 from .tools.web_tools import (
