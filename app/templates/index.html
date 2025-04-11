@@ -98,6 +98,103 @@
         </section>
     </div>
         </div>
-    <script src="/static/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const taskInput = document.getElementById('task-input');
+            const fileInput = document.getElementById('file-input');
+            const fileList = document.getElementById('file-list');
+            const sendTaskButton = document.getElementById('send-task');
+            const taskStatusArea = document.getElementById('task-status-area');
+            const responseDisplayArea = document.getElementById('response-display-area');
+            const memoryStateArea = document.getElementById('memory-state-area');
+
+            let uploadedFiles = [];
+
+            // Function to display file list
+            function displayFiles() {
+                fileList.innerHTML = '';
+                uploadedFiles.forEach((file, index) => {
+                    const li = document.createElement('li');
+                    li.textContent = file.name;
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Delete';
+                    deleteButton.onclick = () => deleteFile(index);
+                    li.appendChild(deleteButton);
+                    fileList.appendChild(li);
+                });
+            }
+
+            // Function to handle file uploads
+            fileInput.addEventListener('change', function() {
+                const files = Array.from(this.files);
+                uploadedFiles.push(...files);
+                displayFiles();
+                this.value = ''; // Clear the input after uploading
+            });
+
+            // Function to delete a file from the list
+            function deleteFile(index) {
+                uploadedFiles.splice(index, 1);
+                displayFiles();
+            }
+
+            // Function to send task and files to the backend
+            sendTaskButton.addEventListener('click', function() {
+                const task = taskInput.value;
+
+                if (!task) {
+                    alert("Please enter a task description.");
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('task', task);
+
+                uploadedFiles.forEach(file => {
+                    formData.append('files', file);
+                });
+
+                taskStatusArea.textContent = 'Sending task...';
+                responseDisplayArea.textContent = '';
+
+                fetch('/process_task', {  // Assuming this is your backend endpoint
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(response => response.json())
+                .then(data => {
+                    taskStatusArea.textContent = 'Task completed.';
+                    responseDisplayArea.textContent = data.response || 'No response received.';
+                    // Update memory state if your backend returns it
+                    if (data.memory_state) {
+                        memoryStateArea.textContent = data.memory_state;
+                    }
+
+                    // Clear task input and uploaded files after successful submission
+                    taskInput.value = '';
+                    uploadedFiles = [];
+                    displayFiles();
+                })
+                .catch(error => {
+                    taskStatusArea.textContent = 'Error processing task.';
+                    responseDisplayArea.textContent = 'An error occurred: ' + error;
+                });
+            });
+
+            // Initial display of files (if any are pre-selected, though unlikely with this setup)
+            displayFiles();
+
+            // Example fetch for initial memory state - replace with your actual endpoint if needed
+            fetch('/memory_state')
+                .then(response => response.text())
+                .then(state => {
+                    memoryStateArea.textContent = state || 'Memory state is empty.';
+                })
+                .catch(error => {
+                    memoryStateArea.textContent = 'Failed to load memory state: ' + error;
+                });
+
+        });
+    </script>
 </body>
 </html>
