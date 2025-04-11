@@ -15,7 +15,6 @@ from .swizzy_tools import (
     ponder_document_request,
     read_file_content,
     convert_file_format,
-    analyze_content_structure,
 )
 from .tools import (
     analyze_spreadsheet,
@@ -27,7 +26,6 @@ from .tools.content_tools import (
     convert_pdf_to_markdown,
     convert_to_markdown,
     read_markdown,
-    create_markdown,
     edit_markdown_section,
     analyze_content_structure,
 )
@@ -272,19 +270,15 @@ memory_tools_list = [
     create_spreadsheet,
     modify_spreadsheet,
     read_file_content,
-    analyze_spreadsheet,
-    # Document tools
-    ponder_document_request,
-    create_document,
-    extract_text_from_image,
-    read_markdown,
-    create_markdown,
-    edit_markdown_section,
-    convert_file_format,
-    analyze_content_structure,
+    analyze_spreadsheet,    
     convert_pdf_to_markdown,
     convert_to_markdown,
-    # Other tools
+    read_markdown,
+    edit_markdown_section,
+    extract_text_from_image,
+    create_markdown,
+    create_document,
+    ponder_document_request,
     plan_research,
     execute_research_plan,
     research_topic,
