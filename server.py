@@ -75,37 +75,37 @@ async def chat(
     """
     form_data = await request.form()
     message = form_data.get("message", "")
+    uploaded_file_handles = []
     try:
-        uploaded_file_handles = []
-        for file in files: 
-            if file.filename: 
-                safe_filename = os.path.basename(file.filename) 
-                if not safe_filename: 
-                    continue 
+        for file in files:
+            if file.filename:
+                safe_filename = os.path.basename(file.filename)
+                if not safe_filename:
+                    continue
 
                 content = await file.read()
                 file_handle = storage_service.upload_file(file_identifier=safe_filename, file_content=content)
                 uploaded_file_handles.append(file_handle)
                 logger.info(f"Uploaded file '{safe_filename}' with handle: {file_handle}")
-            else: 
+            else:
                 logger.debug("Skipping file upload due to empty filename.")
 
-                # Prepare input for the agent runner as a single string
-        if uploaded_file_handles: 
-            # Append file handles to the message string 
-            file_info = "\n\n[Attached Files: " + ", ".join(uploaded_file_handles) + "]" 
-            agent_run_input = message + file_info 
-        else: 
-            # Just use the message if no files were uploaded 
-            agent_run_input = message 
+        # Prepare input for the agent runner as a single string
+        if uploaded_file_handles:
+            # Append file handles to the message string
+            file_info = "\n\n[Attached Files: " + ", ".join(uploaded_file_handles) + "]"
+            agent_run_input = message + file_info
+        else:
+            # Just use the message if no files were uploaded
+            agent_run_input = message
 
-                # Log the actual input being sent to the runner. 
-        logger.info(f"Running starting agent with input string: '{agent_run_input}'") 
+        # Log the actual input being sent to the runner.
+        logger.info(f"Running starting agent with input string: '{agent_run_input}'")
 
-                # --- Agent Execution (Handoffs handled internally by agents library) --- 
-                # Simply run the starting agent. Handoffs will occur automatically if needed. 
-        result = await Runner.run(starting_agent, input=agent_run_input) 
-        logger.info(f"Runner returned: {result}") 
+        # --- Agent Execution (Handoffs handled internally by agents library) ---
+        # Simply run the starting agent. Handoffs will occur automatically if needed.
+        result = await Runner.run(starting_agent, input=agent_run_input)
+        logger.info(f"Runner returned: {result}")
 
                 # Check result type before accessing attributes
         if result and hasattr(result, 'final_output') and result.final_output is not None:
@@ -113,13 +113,13 @@ async def chat(
           if hasattr(result.final_output, 'file_link') and result.final_output.file_link:
               response_data["file_link"] = result.final_output.file_link
           elif isinstance(result.final_output, dict) and "file_link" in result.final_output:
-              response_data["file_link"] = result.final_output["file_link"]
+            response_data["file_link"] = result.final_output["file_link"]
               response_data["response"] = result.final_output.get("description", "Processed file.")
-          logger.info(f"Response returned to user: {response_data}") 
+          logger.info(f"Response returned to user: {response_data}")
           return response_data
         else:
-          logger.info("Empty response returned to user") 
-          return {"response": "ok"} 
+          logger.info("Empty response returned to user")
+          return {"response": "ok"}
     except Exception as e:
         logger.exception(f"Error processing message or files: {e}")
         raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {e}")
