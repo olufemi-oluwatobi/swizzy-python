@@ -884,3 +884,40 @@ def extract_text_from_image(file_handle: str, extraction_type: str = "text") -> 
     except Exception as e:
         logger.exception(f"Error extracting {extraction_type} from image {file_handle}: {e}")
         return f"Error extracting {extraction_type} from image: {e}"
+
+
+@function_tool
+def create_markdown(text: str, filename: str) -> str:
+    """
+    Creates a markdown file with the input text as a heading 1.
+
+    Args:
+        text: The text to be used as the heading.
+        filename: The name of the file to create (e.g., "my_file.md").
+
+    Returns:
+        The path to the created markdown file.
+    """
+    # Ensure the filename has a .md extension
+    if not filename.endswith(".md"):
+        filename += ".md"
+
+    filepath = os.path.join("file_store", filename)
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(f"# {text}")
+
+    return filepath
+
+
+
+
+
+
+
+
+
+
+
+
+
+
