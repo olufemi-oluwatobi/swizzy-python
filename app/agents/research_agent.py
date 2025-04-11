@@ -152,9 +152,6 @@ research_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
         research_topic,
         # Web tools
         search_web,
-        search_with_budget,
-        reset_search_budget,
-        get_search_cost_summary,
         read_url,
         extract_url_to_markdown,
         # Content tools
