@@ -1,75 +1,103 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Swizzy Chat</title>
+    <title>Swizzy Task Manager</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        #chat-container {
-            max-width: 600px;
+        body {
+            font-family: sans-serif;
+        }
+
+        #app-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            max-width: 1000px;
             margin: 20px auto;
             padding: 20px;
-            border: 1px solid #ccc;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        section {
+            border: 1px solid #ddd;
+            padding: 15px;
             border-radius: 5px;
         }
-        #messages {
-            height: 300px;
-            overflow-y: auto;
-            border: 1px solid #eee;
-            margin-bottom: 20px;
-            padding: 10px;
+
+        #task-input-area, #task-status-area, #response-display-area, #memory-state-area {
+          width: 100%;
         }
-        .message {
-            margin: 10px 0;
-            padding: 5px;
-        }
-        .user-message {
-            background-color: #e3f2fd;
-            border-radius: 5px;
-            padding: 8px;
-            margin: 5px 0;
-        }
-        .agent-message {
-            background-color: #f5f5f5;
-            border-radius: 5px;
-            padding: 8px;
-            margin: 5px 0;
-        }
-        #input-container {
-            margin-top: 15px;
-        }
-        #message-form > div {
-            display: flex;
-            gap: 10px;
-            align-items: center;
+
+        #task-input-area input, #task-input-area button, #task-input-area textarea {
             margin-bottom: 10px;
         }
-        #message-text-input {
-            flex-grow: 1;
-            padding: 8px;
+
+        #task-input-area textarea{
+          width: 98%;
+          height: 80px;
         }
-        #file-input {
-            padding: 5px;
+
+        #task-status-area {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            min-height: 100px;
         }
-        #send-message {
-            padding: 8px 15px;
+
+        #response-display-area {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            min-height: 100px;
+        }
+
+        #memory-state-area {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            min-height: 100px;
+        }
+
+        #file-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #file-list li {
+            margin-bottom: 5px;
         }
     </style>
 </head>
 <body>
-    <div id="chat-container">
-        <h1>Swizzy Chat</h1>
-        <div id="messages"></div>
-        <!-- Replaced form with div to prevent default submission -->
-        <div id="input-area"> 
-             <!-- Group file input and text input -->
-             <div> 
-                 <input type="file" id="file-input" multiple> 
-                 <input type="text" id="message-text-input" placeholder="Type your message..."> 
-             </div>
-            <button type="submit" id="send-message">Send</button> <!-- Type=submit doesn't hurt on a non-form button -->
-        </div>
+  <div id="app-container">
+
+    <div id="main-content">
+        <section id="task-input-area">
+            <h2>Task Input</h2>
+            <textarea id="task-input" placeholder="Describe your task..."></textarea>
+            <input type="file" id="file-input" multiple>
+            <ul id="file-list"></ul>
+            <button id="send-task">Send Task</button>
+        </section>
+
+        <section id="task-status-area">
+            <h2>Task Status</h2>
+        </section>
+
+        <section id="response-display-area">
+            <h2>Response</h2>
+        </section>
     </div>
+
+    <div id="sidebar">
+        <section id="memory-state-area">
+            <h2>Memory State</h2>
+        </section>
+    </div>
+        </div>
     <script src="/static/js/app.js"></script>
 </body>
 </html>

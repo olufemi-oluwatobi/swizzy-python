@@ -110,13 +110,12 @@ async def swizzy_consistency_guardrail(
     """Checks consistency between Swizzy's reported action, outcome, and response."""
 
     parsed_output: SwizzyOutput | None = None
-    parsing_error = None
-    tripwire = False # Default to not blocking
     inconsistencies = []
+    output_info = {"consistency_checks_run": True, "inconsistencies_found": []}
 
     if isinstance(output, str):
         logger.info("Swizzy Consistency Guardrail received string output, attempting to parse JSON.")
-        try:
+        
             # Clean potential markdown fences
             json_str = output.strip()
             if json_str.startswith("```json"):
@@ -242,6 +241,67 @@ async def specialist_file_creation_guardrail(
         output_info={"specialist_checks_run": True, "inconsistencies_found": inconsistencies},
         tripwire_triggered=tripwire,
     )
+
+# Memory Agent Configuration
+memory_agent_config = Agent(
+    name="Memory Agent",
+    instructions=(
+        "You are a Memory Management Agent. "
+        "Your primary responsibility is to manage memories effectively. "
+        "You can store, retrieve, update, delete, and search memories. "
+        "Use the provided tools to interact with the memory system. "
+        "Follow these instructions:"
+        "- When asked to store something, use the store_memory tool. "
+        "- When asked to retrieve something, use the retrieve_memory tool. "
+        "- When asked to update something, use the update_memory tool. "
+        "- When asked to delete something, use the delete_memory tool. "
+        "- When asked to search something, use the search_memories tool. "
+        "- When asked to store a link, use the store_link tool. "
+        "- When asked to get links by tag, use the get_links_by_tag tool."
+        "- Always use appropriate tags to categorize your memories for easy retrieval."
+        "- Prioritize accuracy and relevance when managing memories."
+        f"{STYLE_INSTRUCTIONS}"
+    ),
+    model=gemini_model,
+    tools=[
+        store_memory,
+        retrieve_memory,
+        update_memory,
+        delete_memory,
+        search_memories,
+        store_link,
+        get_links_by_tag
+    ],
+)
+
+# List of tools that are not memory tools or agents
+memory_tools_list = [
+    # Spreadsheet tools
+    ponder_spreadsheet_request,
+    create_spreadsheet,
+    modify_spreadsheet,
+    read_file_content,
+    analyze_spreadsheet,
+    # Document tools
+    ponder_document_request,
+    create_document,
+    extract_text_from_image,
+    read_markdown,
+    create_markdown,
+    edit_markdown_section,
+    convert_file_format,
+    analyze_content_structure,
+    convert_pdf_to_markdown,
+    convert_to_markdown,
+    # Other tools
+    plan_research,
+    execute_research_plan,
+    research_topic,
+    search_web,
+    search_with_budget,
+    reset_search_budget,
+    get_search_cost_summary,
+]
 
 # --- Define Specialist Agents --- 
 
@@ -374,18 +434,10 @@ spreadsheet_agent = Agent(
         f" {STYLE_INSTRUCTIONS}"
         "**IMPORTANT: LOGGING ACTIONS AND DECISIONS**"
         "- ALWAYS log your significant actions and decisions using the store_memory tool"
-        "- When analyzing spreadsheets, store key insights and methodologies used"
-        "- When modifying data, log the changes made and the reasoning behind them"
-        "- Use appropriate tags to categorize your memories for easy retrieval"
         "- Include links to relevant resources using the store_link tool"
     ),
-    model=gemini_model, # Or preferred model
+    model=gemini_model,  # Or preferred model
     tools=[
-        ponder_spreadsheet_request, 
-        create_spreadsheet, 
-        modify_spreadsheet, 
-        read_file_content, 
-        analyze_spreadsheet,
         store_memory,
         retrieve_memory,
         update_memory,
@@ -394,6 +446,10 @@ spreadsheet_agent = Agent(
         store_link,
         get_links_by_tag
     ],
+)
+
+memory_agent = Agent(
+    **memory_agent_config.model_dump(), tools=[*memory_agent_config.tools, *memory_tools_list]
 )
 
 # Agent for Documents (Create)
@@ -633,35 +689,48 @@ data_extraction_agent = Agent(
 )
 
 # Planner Agent Configuration
+# Planner Agent Configuration
 planner_agent = Agent(
-    name="Planner Agent",
+    name="Strategic Planner Agent",
     instructions=(
-        "You are a Planner Agent, specialized in creating comprehensive plans for tasks and projects. "
-        "Your goal is to analyze requests, break them down into actionable steps, and create structured plans "
-        "with clear success criteria. "
-        
+        "You are the Strategic Planner Agent, specialized in creating comprehensive, structured plans for tasks and projects. "
+        "Your goal is to analyze requests, break them down into actionable steps, and create well-structured plans in Markdown "
+        "with clear success criteria. You also consider budget, task complexity, and success criteria size when formulating plans. "
+        "You can also re-strategize if the initial plan is not feasible. "
+        "\n"
+        "**PLANNING PRINCIPLES**\n"
+        "- **STRATEGIZE**: You break down complex tasks into actionable steps.\n"
+        "- **STRUCTURE**: You create well-structured plans with dependencies.\n"
+        "- **ESTIMATE**: You provide time and resource estimates for each step.\n"
+        "- **ASSESS**: You identify potential risks, budget constraints, and mitigation strategies.\n"
+        "- **DEFINE**: You define clear success criteria to measure task completion.\n"
+        "- **RE-STRATEGIZE**: If the initial plan is not feasible, you can re-strategize and create a new plan.\n"
+        "- **MARKDOWN**: Your plans are always generated in Markdown.\n"
+        "\n"
         "**IMPORTANT: LOGGING ACTIONS AND DECISIONS**"
-        "- ALWAYS log your significant planning decisions using the store_memory tool"
-        "- When creating plans, store the reasoning behind your approach"
-        "- When defining success criteria, document your rationale"
-        "- Use appropriate tags to categorize your memories for easy retrieval"
-        
+        "- ALWAYS log your significant planning decisions using the `store_memory` tool.\n"
+        "- When creating plans, store the reasoning behind your approach.\n"
+        "- When defining success criteria, document your rationale, tag this memory as `planning_decisions`.\n"
+        "- Use appropriate tags to categorize your memories for easy retrieval.\n"
+        "\n"
         "**PLANNING CAPABILITIES**: "
-        "- ANALYZE: You can analyze tasks and break them down into steps "
-        "- STRUCTURE: You can create structured plans with dependencies "
-        "- ESTIMATE: You can provide time and resource estimates "
-        "- RISK: You can identify potential risks and mitigation strategies "
-        "- SUCCESS: You can define clear success criteria "
-        
+        "- **ANALYZE**: You can analyze tasks and break them down into steps.\n"
+        "- **STRUCTURE**: You can create structured plans with dependencies.\n"
+        "- **ESTIMATE**: You can provide time and resource estimates.\n"
+        "- **RISK**: You can identify potential risks and mitigation strategies.\n"
+        "- **SUCCESS**: You can define clear success criteria.\n"
+        "\n"
         "**WORKFLOW**: "
-        "1. When given a task, first analyze it to understand the requirements "
-        "2. Break the task down into logical steps with dependencies "
-        "3. Estimate time and resources needed for each step "
-        "4. Identify potential risks and mitigation strategies "
-        "5. Define clear success criteria "
-        "6. Store the plan in memory for future reference "
-        
-        "Always create plans that are detailed, actionable, and realistic."
+        "1. When given a task, first analyze it to understand the requirements.\n"
+        "2. Break the task down into logical steps with dependencies.\n"
+        "3. Estimate time and resources needed for each step.\n"
+        "4. Identify potential risks and mitigation strategies.\n"
+        "5. Define clear success criteria.\n"
+        "6. ALWAYS call the `store_memory` at the end, with the tag `generated_plan`.\n"
+        "**CRITICAL RULES**\n"
+        "- Never claim to have generated a plan without actually using the `create_markdown` tool.\n"
+        f"- You MUST use the `create_markdown` tool with a `filename` equal to `plan.md`\n"
+        "Always create plans that are detailed, actionable, and realistic.\n"
     ),
     tools=[
         # Memory tools
@@ -676,6 +745,7 @@ planner_agent = Agent(
         # Content tools
         read_markdown,
         create_markdown,
+
         
         # File tools
         read_file_content

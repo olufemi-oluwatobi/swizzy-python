@@ -1,8 +1,7 @@
-import time
-from collections.abc import AsyncIterator
-from logging import getLogger
-from typing import List, Dict, Any
 import os
+
+from logging import getLogger
+from typing import List, Annotated
 from dotenv import load_dotenv
 
 # Load environment variables first, before any other imports
@@ -10,20 +9,20 @@ load_dotenv()
 
 # Now import the rest after environment is set up
 from agents import Runner
-from fastapi import FastAPI, Request, UploadFile, File as FastApiFile, Form
+from fastapi import FastAPI, Request, UploadFile, File as FastApiFile, Form, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 # Your application-specific imports
-from app.agent_config import starting_agent
-from app.file_storage import FileStorageService
+from app.agent_config import starting_agent, memory_agent
 from app.services import storage_service, FILE_STORE_DIRECTORY, PUBLIC_FILES_MOUNT_PATH
 
-# --- Constants --- 
+# --- Constants ---
 STATIC_DIRECTORY = "static"
 TEMPLATE_DIRECTORY = "app/templates"
+
 
 # Store agent state for the session
 agent_state = None
@@ -56,18 +55,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # --- Landing Page Route ---
 @app.get("/", response_class=HTMLResponse)
 async def get_landing_page(request: Request):
     """Serves the index.html template."""
     return templates.TemplateResponse("index.html", {"request": request})
 
-# --- Message Endpoint (Modified for File Uploads & FileStorageService) --- 
-@app.post("/send_message")
-async def send_message(message: str = Form(...), files: List[UploadFile] = FastApiFile(...)):
-    """Handle incoming messages and optional file uploads, using FileStorageService."""
+# --- Message Endpoint (Modified for File Uploads & FileStorageService) ---
+@app.post("/chat")
+async def chat(
+    request: Request,
+    files: List[UploadFile] = FastApiFile(None),
+    message: Annotated[str, Form()] = ""
+):
+    """Handle incoming messages and optional file uploads, using FileStorageService.
+
+    Receives a form with a message and files.
+    """
+    form_data = await request.form()
+    message = form_data.get("message")
+
     uploaded_file_handles = []
-    try:
         for file in files:
             if file.filename:
                 safe_filename = os.path.basename(file.filename)
@@ -93,30 +102,26 @@ async def send_message(message: str = Form(...), files: List[UploadFile] = FastA
         # Log the actual input being sent to the runner
         logger.info(f"Running starting agent with input string: '{agent_run_input}'")
 
-        # --- Agent Execution (Handoffs handled internally by agents library) --- 
+        # --- Agent Execution (Handoffs handled internally by agents library) ---
         # Simply run the starting agent. Handoffs will occur automatically if needed.
         result = await Runner.run(starting_agent, input=agent_run_input)
         print(result)
 
         # Check result type before accessing attributes
         if result and hasattr(result, 'final_output') and result.final_output is not None:
-            response_data = {"response": result.final_output}
-            if hasattr(result.final_output, 'file_link') and result.final_output.file_link:
-                response_data["file_link"] = result.final_output.file_link
-            elif isinstance(result.final_output, dict) and "file_link" in result.final_output:
-                response_data["file_link"] = result.final_output["file_link"]
-                response_data["response"] = result.final_output.get("description", "Processed file.")
-
-            return response_data
+          response_data = {"response": result.final_output}
+          if hasattr(result.final_output, 'file_link') and result.final_output.file_link:
+              response_data["file_link"] = result.final_output.file_link
+          elif isinstance(result.final_output, dict) and "file_link" in result.final_output:
+              response_data["file_link"] = result.final_output["file_link"]
+              response_data["response"] = result.final_output.get("description", "Processed file.")
+          return response_data
         else:
-            return {"error": "Agent run failed or returned None."}
-
-    except FileNotFoundError as e:
-        logger.error(f"Error accessing file during processing: {e}")
-        return {"error": f"Server error accessing file: {e}"}
+          return {"response": "ok"}
     except Exception as e:
         logger.exception(f"Error processing message or files: {e}")
-        return {"error": f"An unexpected server error occurred: {e}"}
+        raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {e}")
+
 
 # --- Main Execution Block ---
 if __name__ == "__main__":
