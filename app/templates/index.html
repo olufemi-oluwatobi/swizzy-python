@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Swizzy Chat</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        #chat-container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            margin-bottom: 20px;
+            padding: 10px;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 5px;
+        }
+        .user-message {
+            background-color: #e3f2fd;
+            border-radius: 5px;
+            padding: 8px;
+            margin: 5px 0;
+        }
+        .agent-message {
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            padding: 8px;
+            margin: 5px 0;
+        }
+        #input-container {
+            margin-top: 15px;
+        }
+        #message-form > div {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        #message-text-input {
+            flex-grow: 1;
+            padding: 8px;
+        }
+        #file-input {
+            padding: 5px;
+        }
+        #send-message {
+            padding: 8px 15px;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <h1>Swizzy Chat</h1>
+        <div id="messages"></div>
+        <!-- Replaced form with div to prevent default submission -->
+        <div id="input-area"> 
+             <!-- Group file input and text input -->
+             <div> 
+                 <input type="file" id="file-input" multiple> 
+                 <input type="text" id="message-text-input" placeholder="Type your message..."> 
+             </div>
+            <button type="submit" id="send-message">Send</button> <!-- Type=submit doesn't hurt on a non-form button -->
+        </div>
+    </div>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
