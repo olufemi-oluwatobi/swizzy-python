@@ -74,9 +74,9 @@ async def chat(
     Receives a form with a message and files.
     """
     form_data = await request.form()
-    message = form_data.get("message")
-
-    uploaded_file_handles = []
+    message = form_data.get("message", "")
+    try:
+        uploaded_file_handles = []
         for file in files:
             if file.filename:
                 safe_filename = os.path.basename(file.filename)
@@ -99,13 +99,13 @@ async def chat(
             # Just use the message if no files were uploaded
             agent_run_input = message
 
-        # Log the actual input being sent to the runner
+        # Log the actual input being sent to the runner.
         logger.info(f"Running starting agent with input string: '{agent_run_input}'")
 
         # --- Agent Execution (Handoffs handled internally by agents library) ---
         # Simply run the starting agent. Handoffs will occur automatically if needed.
         result = await Runner.run(starting_agent, input=agent_run_input)
-        print(result)
+        logger.info(f"Runner returned: {result}")
 
         # Check result type before accessing attributes
         if result and hasattr(result, 'final_output') and result.final_output is not None:
@@ -115,8 +115,10 @@ async def chat(
           elif isinstance(result.final_output, dict) and "file_link" in result.final_output:
               response_data["file_link"] = result.final_output["file_link"]
               response_data["response"] = result.final_output.get("description", "Processed file.")
+          logger.info(f"Response returned to user: {response_data}")
           return response_data
         else:
+          logger.info("Empty response returned to user")
           return {"response": "ok"}
     except Exception as e:
         logger.exception(f"Error processing message or files: {e}")
