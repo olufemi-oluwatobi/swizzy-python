@@ -115,7 +115,6 @@ async def swizzy_consistency_guardrail(
     if isinstance(output, str):
         logger.info("Swizzy Consistency Guardrail received string output, attempting to parse JSON.")
         json_str = json_str[7:]
-            if json_str.endswith("```"):
                 json_str = json_str[:-3]
             json_str = json_str.strip()
             
