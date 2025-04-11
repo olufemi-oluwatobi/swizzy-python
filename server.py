@@ -17,7 +17,7 @@ from fastapi.templating import Jinja2Templates
 
 # Your application-specific imports
 from app.agent_config import starting_agent, memory_agent
-from app.services.storagee_services import storage_service, FILE_STORE_DIRECTORY, PUBLIC_FILES_MOUNT_PATH
+from app.services.storage_service import storage_service, FILE_STORE_DIRECTORY, PUBLIC_FILES_MOUNT_PATH
 
 # --- Constants ---
 STATIC_DIRECTORY = "static"

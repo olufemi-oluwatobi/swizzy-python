@@ -14,7 +14,6 @@ from .swizzy_tools import (
     extract_text_from_image,
     ponder_document_request,
     read_file_content,
-    convert_file_format,
 )
 from .tools import (
     analyze_spreadsheet,
@@ -28,6 +27,8 @@ from .tools.content_tools import (
     read_markdown,
     edit_markdown_section,
     analyze_content_structure,
+    convert_file_format,
+    create_markdown
 )
 from .tools.web_tools import (
     read_url,
@@ -276,7 +277,6 @@ memory_tools_list = [
     read_markdown,
     edit_markdown_section,
     extract_text_from_image,
-    create_markdown,
     create_document,
     ponder_document_request,
     plan_research,
@@ -434,7 +434,18 @@ spreadsheet_agent = Agent(
 )
 
 memory_agent = Agent(
-    **memory_agent_config.model_dump(), tools=[*memory_agent_config.tools, *memory_tools_list]
+    name="Memory Tool",
+    instructions=(
+        "You are a Memory Management Tool. "
+        "Your primary responsibility is to manage memories effectively and provide them to other agents upon request. "
+        "You can store, retrieve, update, delete, and search memories. "
+        "Use the provided tools to interact with the memory system. "
+        "When another agent asks you to retrieve information, use the retrieve_memory or search_memories tool to find the relevant information and provide it to them in a clear and concise manner. "
+        "Log all actions using the store_memory tool, including the information that was retrieved and the agent that requested it. "
+        "Prioritize accuracy and relevance when managing memories."
+        f"{STYLE_INSTRUCTIONS}"
+    ),
+   tools=memory_tools_list,
 )
 
 # Agent for Documents (Create)
