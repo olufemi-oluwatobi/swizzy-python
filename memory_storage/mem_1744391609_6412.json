@@ -1,0 +1,11 @@
+{
+  "title": "Task Analysis: House Task Tracker",
+  "content": "The user wants a spreadsheet to track weekly house tasks. Columns: Task Name, Person Responsible (Jake, Mike, Paul), Day of the Week, Status (To Do, In Progress, Completed).",
+  "tags": [
+    "spreadsheet",
+    "task tracking"
+  ],
+  "summary": "Analysis of user request for house task tracker spreadsheet.",
+  "links": [],
+  "timestamp": 1744391609.1305604
+}

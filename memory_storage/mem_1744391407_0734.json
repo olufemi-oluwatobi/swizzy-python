@@ -1,0 +1,13 @@
+{
+  "title": "Task Tracking Spreadsheet Analysis",
+  "content": "The user requested a weekly task tracking spreadsheet. The spreadsheet should include columns for Task Name, Assignee, Status, Due Date, Priority, and Notes. Each week should have its own sheet, named with the week's date range. The sheet should be formatted for easy readability.",
+  "tags": [
+    "spreadsheet",
+    "task tracking",
+    "weekly",
+    "excel"
+  ],
+  "summary": "Analysis of user request for task tracking spreadsheet.",
+  "links": [],
+  "timestamp": 1744391407.0189576
+}

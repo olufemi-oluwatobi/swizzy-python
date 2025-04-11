@@ -64,30 +64,9 @@ from app.tools.memory_tools import (
 )
 from app.tools.core_tools import ponder_task
 from app.config import STYLE_INSTRUCTIONS
+from app.agents.model_config import gemini_model  # Import shared model config
 
 logger = logging.getLogger(__name__)
-
-# Load environment variables if not already loaded
-load_dotenv()
-
-# Verify environment variables and setup OpenAI client for Gemini
-api_key = os.getenv("GOOGLE_API_KEY") # Assuming Gemini uses GOOGLE_API_KEY based on prior context
-base_url = os.getenv("OPENAI_BASE_URL") # Assuming a proxy/custom base URL
-
-if not api_key or not base_url:
-    raise ValueError("Missing required environment variables: GOOGLE_API_KEY and OPENAI_BASE_URL must be set")
-
-# Create custom OpenAI client
-client = AsyncOpenAI(
-    api_key=api_key,
-    base_url=base_url
-)
-
-# Create the model configuration for Gemini
-gemini_model = OpenAIChatCompletionsModel(
-    model="gemini-1.5-flash", # Updated to 1.5-flash as per previous context, adjust if needed
-    openai_client=client,
-)
 
 # --- Define Output Model ---
 class SwizzyOutput(BaseModel):
@@ -100,24 +79,18 @@ class SwizzyOutput(BaseModel):
     task_context_id: Optional[str] = Field(default=None, description="Unique ID for the current task context, if available.")
 
 # Agent for Spreadsheets (Create/Modify) - Updated with TaskContext and tools
-spreadsheet_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
+spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
     name="Spreadsheet Specialist",
-    instructions="".join([
+    instructions=''.join([
         "You are a specialist in dealing with spreadsheets (.xlsx, .csv). Your primary responsibility is to produce high-quality spreadsheet files that meet client requirements. ",
         "You MUST use the `get_task_id` tool to get the current task ID and prepend it to any filename you create (e.g., `[task_id]_budget.xlsx`). ",
         "You MUST log significant actions using the `log_action` tool. ",
-        "**CRITICAL: ALWAYS PONDER FIRST!**
-",
-        "Before taking ANY action, you MUST:
-",
-        "1. Use the ponder_task tool to analyze the request
-",
-        "2. Store the pondering results using store_memory
-",
-        "3. Log this pondering action using log_action.
-",
-        "4. Follow the recommended approach from pondering
-",
+        "**CRITICAL: ALWAYS PONDER FIRST!**",
+        "Before taking ANY action, you MUST:",
+        "1. Use the ponder_task tool to analyze the request",
+        "2. Store the pondering results using store_memory",
+        "3. Log this pondering action using log_action.",
+        "4. Follow the recommended approach from pondering",
         "**CRITICAL: ALWAYS THINK BEFORE YOU ACT!** You must use the ponder_spreadsheet_request tool FIRST before taking any action. ",
         "Your workflow must ALWAYS follow this sequence: ",
         "1. PONDER: Use ponder_spreadsheet_request to think through the request and determine the best approach ",
@@ -152,17 +125,14 @@ spreadsheet_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
         "- To log pondering: `log_action(action_description='Pondered request: Determined need for 3 columns (Category, Budget, Actual) and currency formatting.')`",
         "- To get task ID (example assumes ID is 'abc-123'): `get_task_id()` -> returns 'abc-123'",
         "- To read a file: `read_file_content(file_handle='sales_data.xlsx')` ",
-        "- To create a formatted spreadsheet (after getting task_id='abc-123'): `create_spreadsheet(filename='abc-123_budget.xlsx', spreadsheet_data='{...json data...}')` ",
-        "- To modify a spreadsheet: `modify_spreadsheet(file_handle='inventory.xlsx', operations='[{"operation": "update_cell", "cell": "B5", "value": "42"}]')` ",
+        f"- To create a formatted spreadsheet (after getting task_id='abc-123'): `create_spreadsheet(filename='abc-123_budget.xlsx', spreadsheet_data='{{...json data...}}')` ",
+        f"- To modify a spreadsheet: `modify_spreadsheet(file_handle='inventory.xlsx', operations='[{{\"operation\": \"update_cell\", \"cell\": \"B5\", \"value\": \"42\"}}]')` ",
         "- To log creation: `log_action(action_description='Created spreadsheet abc-123_budget.xlsx with budget categories and formulas.')`",
-        "- To analyze a spreadsheet: `analyze_spreadsheet(file_handle='sales_data.xlsx', analysis_config='{...json config...}')` ",
+        f"- To analyze a spreadsheet: `analyze_spreadsheet(file_handle='sales_data.xlsx', analysis_config='{{...json config...}}')` ",
         # ...(rest of instructions remain the same)...
-        "**IMPORTANT: LOGGING ACTIONS AND DECISIONS**
-",
-        "- ALWAYS log your significant actions and decisions using the log_action tool
-",
-        "- Use store_memory for detailed reasoning or complex state preservation.
-",
+        "**IMPORTANT: LOGGING ACTIONS AND DECISIONS**",
+        "- ALWAYS log your significant actions and decisions using the log_action tool",
+        "- Use store_memory for detailed reasoning or complex state preservation.",
         "- Include links to relevant resources using the store_link tool"
     ]),
     model=gemini_model,
@@ -172,7 +142,7 @@ spreadsheet_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
         log_action,
         # Core/Pondering Tools
         ponder_task,
-        ponder_spreadsheet_request, # Keep specific pondering tool if needed
+        ponder_spreadsheet_request,  # Keep specific pondering tool if needed
         # Memory tools
         store_memory,
         retrieve_memory,
@@ -186,5 +156,5 @@ spreadsheet_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
         create_spreadsheet,
         modify_spreadsheet,
         analyze_spreadsheet,
-    ],
+    ]
 )

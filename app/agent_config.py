@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 from agents import OpenAIChatCompletionsModel
 
-from app.agents import memory_agent_config, spreadsheet_agent, document_agent, research_agent, planner_agent, validator_agent, swizzy_assistant_agent
+from app.agents import memory_agent, swizzy_assistant_agent
 
 logger = logging.getLogger(__name__)
 
@@ -51,3 +51,6 @@ class SwizzyOutput(BaseModel):
 
 # The agent that starts the interaction is now the orchestrator
 starting_agent = swizzy_assistant_agent
+
+# Export memory_agent for use in other modules
+__all__ = ['starting_agent', 'memory_agent']

@@ -65,6 +65,13 @@ from app.tools.memory_tools import (
 from app.tools.core_tools import ponder_task
 from app.config import STYLE_INSTRUCTIONS
 
+# Import specialist agents
+from app.agents.document_agent import document_agent
+from app.agents.spreadsheet_agent import spreadsheet_agent
+from app.agents.research_agent import research_agent
+from app.agents.planner_agent import planner_agent
+from app.agents.validator_agent import validator_agent
+
 logger = logging.getLogger(__name__)
 
 # Load environment variables if not already loaded

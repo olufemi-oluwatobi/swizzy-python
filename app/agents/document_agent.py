@@ -111,18 +111,12 @@ document_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
         "You MUST log significant actions using the `log_action` tool. ",
         "**MARKDOWN IS YOUR CENTRAL LANGUAGE** - you should always prefer working with Markdown files for maximum flexibility and editability. ",
         "When given other formats, you should convert them to Markdown for editing, and only convert back to other formats when specifically requested. ",
-        "**CRITICAL: ALWAYS PONDER FIRST!**
-",
-        "Before taking ANY action, you MUST:
-",
-        "1. Use the ponder_task tool to analyze the request
-",
-        "2. Store the pondering results using store_memory
-",
-        "3. Log this pondering action using log_action.
-",
-        "4. Follow the recommended approach from pondering
-",
+        "**CRITICAL: ALWAYS PONDER FIRST!**",
+        "Before taking ANY action, you MUST:",
+        "1. Use the ponder_task tool to analyze the request"
+        "2. Store the pondering results using store_memory",
+        "3. Log this pondering action using log_action.",
+        "4. Follow the recommended approach from pondering",
         "**CRITICAL RULES**: ",
         "1. NEVER skip the pondering step - ALWAYS call ponder_document_request first ",
         "2. NEVER skip logging actions - use log_action for pondering and tool use.",
@@ -141,16 +135,11 @@ document_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
         "- ANALYZE: Use analyze_content_structure to understand document organization ",
         "- EXTRACT: Use extract_text_from_image with the file handle ",
          # ...(rest of instructions remain the same)...
-        "**IMPORTANT: LOGGING ACTIONS AND DECISIONS**
-",
-        "- ALWAYS log your significant actions and decisions using the log_action tool
-",
-        "- Use store_memory for detailed reasoning or complex state preservation.
-",
-        "- Include links to relevant resources using the store_link tool
-"
+        "**IMPORTANT: LOGGING ACTIONS AND DECISIONS**",
+        "- ALWAYS log your significant actions and decisions using the log_action tool",
+        "- Use store_memory for detailed reasoning or complex state preservation.",
+        "- Include links to relevant resources using the store_link tool"
     ]),
-    model=gemini_model,
     tools=[
         # Context Tools FIRST
         get_task_id,

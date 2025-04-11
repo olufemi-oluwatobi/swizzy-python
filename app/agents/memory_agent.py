@@ -101,26 +101,35 @@ class SwizzyOutput(BaseModel):
 
 
 # Memory Agent Configuration - Updated with TaskContext and tools
-memory_agent_config = Agent[TaskContext]( # <--- Added TaskContext type hint
+memory_agent = Agent[TaskContext](
     name="Memory Agent",
-    instructions=(
-        "You are a Memory Management Agent. Your primary responsibility is to manage memories effectively. "
-        "You can store, retrieve, update, delete, and search memories. Use the provided tools to interact with the memory system. "
-        "You also have access to the current task ID and can log actions."
-        "Follow these instructions:- When asked to store something, use the store_memory tool. "
-        "- When asked to retrieve something, use the retrieve_memory tool. - When asked to update something, use the update_memory tool. "
-        "- When asked to delete something, use the delete_memory tool. - When asked to search something, use the search_memories tool. "
-        "- When asked to store a link, use the store_link tool. - When asked to get links by tag, use the get_links_by_tag tool."
-        "- Use get_task_id to know the current task ID if needed for context or logging."
-        "- Use log_action to record significant actions taken."
-        "- Always use appropriate tags to categorize your memories for easy retrieval.- Prioritize accuracy and relevance when managing memories."
+    instructions="".join([
+        "You are a Memory Management Agent. Your primary responsibility is to manage memories effectively. ",
+        "You MUST use the `get_task_id` tool and `log_action` tool to track your operations. ",
+        "**CRITICAL: ALWAYS PONDER FIRST!**\n",
+        "Before taking ANY action, you MUST:\n",
+        "1. Use the ponder_task tool to analyze the request\n",
+        "2. Log this pondering action using log_action\n",
+        "3. Follow the recommended approach from pondering\n",
+        "When asked to store something, use the store_memory tool. ",
+        "When asked to retrieve something, use the retrieve_memory tool. ",
+        "When asked to update something, use the update_memory tool. ",
+        "When asked to delete something, use the delete_memory tool. ",
+        "When asked to search something, use the search_memories tool. ",
+        "When asked to store a link, use the store_link tool. ",
+        "When asked to get links by tag, use the get_links_by_tag tool.",
+        "Always use appropriate tags to categorize your memories for easy retrieval.",
+        "Prioritize accuracy and relevance when managing memories.",
+        "Log all significant actions using log_action tool.",
         f"{STYLE_INSTRUCTIONS}"
-    ),
+    ]),
     model=gemini_model,
     tools=[
         # Context Tools
         get_task_id,
         log_action,
+        # Core/Pondering Tools
+        ponder_task,
         # Memory Tools
         store_memory,
         retrieve_memory,

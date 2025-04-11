@@ -1,0 +1,12 @@
+{
+  "title": "Excel Task Tracking Plan",
+  "content": "Detailed plan for creating an Excel file with two sheets. The first sheet tracks individual tasks with columns for Task Name, Due Date, Completion Date, Housemate (Jake, Pope, John, Paul), and Status (Complete/Incomplete). Includes formulas to calculate the time taken to complete each task (Completion Date - Due Date). The second sheet calculates the average tasks completed per housemate per month. Includes steps for creating the sheets, adding the columns, adding the formulas, and calculating the averages.",
+  "tags": [
+    "excel",
+    "task tracking",
+    "housemates"
+  ],
+  "summary": "Plan for creating an Excel file for task tracking.",
+  "links": [],
+  "timestamp": 1744391866.0565844
+}

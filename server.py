@@ -109,9 +109,7 @@ async def process_task(
         # --- Prepare Agent Input ---
         if uploaded_file_handles:
             # Pass the *original* file handles to the agent
-            file_info = "
-
-            [Attached Files: " + ", ".join(uploaded_file_handles) + "]"
+            file_info = "[Attached Files: " + ", ".join(uploaded_file_handles) + "]"
             agent_input = task + file_info
         else:
             agent_input = task
@@ -196,10 +194,8 @@ async def chat(
 
         # Prepare input for the agent runner as a single string
         if uploaded_file_handles:
-            # Append *original* file handles to the message string
-            file_info = "
-
-[Attached Files: " + ", ".join(uploaded_file_handles) + "]"
+            # Append *original* file handles to the message strings
+            file_info = "[Attached Files: " + ", ".join(uploaded_file_handles) + "]"
             agent_run_input = message + file_info
         else:
             # Just use the message if no files were uploaded
