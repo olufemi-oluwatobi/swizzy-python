@@ -102,94 +102,94 @@ class SwizzyOutput(BaseModel):
 
 # --- Define Output Guardrails FIRST --- 
 
-@output_guardrail
-async def swizzy_consistency_guardrail(
-    context: RunContextWrapper, agent: Agent, output: SwizzyOutput | str # Accept str too
-) -> GuardrailFunctionOutput:
-    """Checks consistency between Swizzy's reported action, outcome, and response."""
+# @output_guardrail
+# async def swizzy_consistency_guardrail(
+#     context: RunContextWrapper, agent: Agent, output: SwizzyOutput | str # Accept str too
+# ) -> GuardrailFunctionOutput:
+#     """Checks consistency between Swizzy's reported action, outcome, and response."""
 
-    parsed_output: SwizzyOutput | None = None
-    inconsistencies = []
-    output_info = {"consistency_checks_run": True, "inconsistencies_found": []}
-
-    if isinstance(output, str):
-        logger.info("Swizzy Consistency Guardrail received string output, attempting to parse JSON.")
-        json_str = json_str[7:]
-                json_str = json_str[:-3]
-            json_str = json_str.strip()
+#     parsed_output: SwizzyOutput | None = None
+#     inconsistencies = []
+#     output_info = {"consistency_checks_run": True, "inconsistencies_found": []}
+#     if isinstance(output, str):
+#         logger.info("Swizzy Consistency Guardrail received string output, attempting to parse JSON.")
+#         json_str = json_str[7:]s
+#         if json_str.endswith("```"):
+#                 json_str = json_str[:-3]
+#             json_str = json_str.strip()
             
-            # Handle potential Gemini quirk of non-JSON string before/after JSON block
-            try:
-                start_index = json_str.index('{')
-                end_index = json_str.rindex('}') + 1
-                json_str = json_str[start_index:end_index]
-            except ValueError:
-                # If '{' or '}' not found, proceed assuming it might be valid JSON already
-                pass
+#             # Handle potential Gemini quirk of non-JSON string before/after JSON block
+#             try:
+#                 start_index = json_str.index('{')
+#                 end_index = json_str.rindex('}') + 1
+#                 json_str = json_str[start_index:end_index]
+#             except ValueError:
+#                 # If '{' or '}' not found, proceed assuming it might be valid JSON already
+#                 pass
 
-            parsed_output = SwizzyOutput.model_validate_json(json_str)
-            logger.info("Successfully parsed JSON string from output.")
-        except Exception as e:
-            parsing_error = f"Failed to parse JSON from string output: {e}\nRaw string: {output}"
-            logger.error(parsing_error)
-            inconsistencies.append("Output was an unparsable string.")
-            tripwire = True # Failed to parse structured output
-    elif isinstance(output, SwizzyOutput):
-        logger.info("Swizzy Consistency Guardrail received SwizzyOutput object.")
-        parsed_output = output
-    else:
-        parsing_error = f"Guardrail received unexpected output type: {type(output)}"
-        logger.error(parsing_error)
-        inconsistencies.append("Guardrail received unexpected output type.")
-        tripwire = True
+#             parsed_output = SwizzyOutput.model_validate_json(json_str)
+#             logger.info("Successfully parsed JSON string from output.")
+#         except Exception as e:
+#             parsing_error = f"Failed to parse JSON from string output: {e}\nRaw string: {output}"
+#             logger.error(parsing_error)
+#             inconsistencies.append("Output was an unparsable string.")
+#             tripwire = True # Failed to parse structured output
+#     elif isinstance(output, SwizzyOutput):
+#         logger.info("Swizzy Consistency Guardrail received SwizzyOutput object.")
+#         parsed_output = output
+#     else:
+#         parsing_error = f"Guardrail received unexpected output type: {type(output)}"
+#         logger.error(parsing_error)
+#         inconsistencies.append("Guardrail received unexpected output type.")
+#         tripwire = True
 
-    # Proceed with checks only if parsing was successful
-    if parsed_output:
-        action = parsed_output.action_taken.lower()
-        # Handle potential None outcome if parsing from string
-        outcome_val = getattr(parsed_output, 'outcome', None)
-        outcome = str(outcome_val).lower() if outcome_val is not None else ""
-        response = parsed_output.response_to_user.lower()
-        handles = parsed_output.generated_handles
-        error = parsed_output.error_details
+#     # Proceed with checks only if parsing was successful
+#     if parsed_output:
+#         action = parsed_output.action_taken.lower()
+#         # Handle potential None outcome if parsing from string
+#         outcome_val = getattr(parsed_output, 'outcome', None)
+#         outcome = str(outcome_val).lower() if outcome_val is not None else ""
+#         response = parsed_output.response_to_user.lower()
+#         handles = parsed_output.generated_handles
+#         error = parsed_output.error_details
 
-        # Check 1: Error reporting consistency
-        if "error" in outcome and not error:
-            inconsistencies.append("Outcome mentions error, but no error_details provided.")
-        if error and "error" not in outcome:
-            inconsistencies.append("Error details provided, but outcome doesn't mention error.")
-            # tripwire = False # Might allow this, but log it
+#         # Check 1: Error reporting consistency
+#         if "error" in outcome and not error:
+#             inconsistencies.append("Outcome mentions error, but no error_details provided.")
+#         if error and "error" not in outcome:
+#             inconsistencies.append("Error details provided, but outcome doesn't mention error.")
+#             # tripwire = False # Might allow this, but log it
 
-        # Check 2: File handle consistency
-        file_creation_handoff = "spreadsheet_agent" in action or "document_agent" in action
-        if file_creation_handoff and "success" in outcome and not handles:
-            pass 
-        if handles and not file_creation_handoff:
-            inconsistencies.append("Generated handles provided, but action wasn't a file creation handoff.")
-            tripwire = True
+#         # Check 2: File handle consistency
+#         file_creation_handoff = "spreadsheet_agent" in action or "document_agent" in action
+#         if file_creation_handoff and "success" in outcome and not handles:
+#             pass 
+#         if handles and not file_creation_handoff:
+#             inconsistencies.append("Generated handles provided, but action wasn't a file creation handoff.")
+#             tripwire = True
 
-        # Check 3: Response mentions error if outcome is error
-        if "error" in outcome and "error" not in response and "fail" not in response:
-            inconsistencies.append("Outcome is error, but response_to_user doesn't clearly state an error.")
-            # tripwire = True 
+#         # Check 3: Response mentions error if outcome is error
+#         if "error" in outcome and "error" not in response and "fail" not in response:
+#             inconsistencies.append("Outcome is error, but response_to_user doesn't clearly state an error.")
+#             # tripwire = True 
 
-        # Check 4: Response mentions handles if provided
-        if handles and all(handle not in response for handle in handles):
-            inconsistencies.append("Generated handles provided, but not mentioned in response_to_user.")
-            # tripwire = True
+#         # Check 4: Response mentions handles if provided
+#         if handles and all(handle not in response for handle in handles):
+#             inconsistencies.append("Generated handles provided, but not mentioned in response_to_user.")
+#             # tripwire = True
 
-    # Log results
-    if inconsistencies:
-        logger.warning(f"Swizzy Consistency Guardrail Check: Inconsistencies found: {inconsistencies}, Tripwire={tripwire}")
-    elif parsing_error:
-        logger.warning(f"Swizzy Consistency Guardrail Check: Parsing failed, Tripwire={tripwire}") # Already logged error
-    else:
-        logger.info("Swizzy Consistency Guardrail Check: Passed.")
+#     # Log results
+#     if inconsistencies:
+#         logger.warning(f"Swizzy Consistency Guardrail Check: Inconsistencies found: {inconsistencies}, Tripwire={tripwire}")
+#     elif parsing_error:
+#         logger.warning(f"Swizzy Consistency Guardrail Check: Parsing failed, Tripwire={tripwire}") # Already logged error
+#     else:
+#         logger.info("Swizzy Consistency Guardrail Check: Passed.")
 
-    return GuardrailFunctionOutput(
-        output_info={"consistency_checks_run": True, "inconsistencies_found": inconsistencies, "parsing_error": parsing_error},
-        tripwire_triggered=tripwire,
-    )
+#     return GuardrailFunctionOutput(
+#         output_info={"consistency_checks_run": True, "inconsistencies_found": inconsistencies, "parsing_error": parsing_error},
+#         tripwire_triggered=tripwire,
+#     )
 
 @output_guardrail
 async def specialist_file_creation_guardrail(
