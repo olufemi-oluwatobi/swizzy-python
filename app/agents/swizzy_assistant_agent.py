@@ -7,7 +7,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from openai import AsyncOpenAI
 # Import TaskContext and context tools from server
-from server import TaskContext, get_task_id, log_action
+from app.context import TaskContext, get_task_id, log_action
 from agents import Agent
 from agents import WebSearchTool, function_tool, OpenAIChatCompletionsModel, handoff, GuardrailFunctionOutput, RunContextWrapper, output_guardrail
 from dotenv import load_dotenv
@@ -122,7 +122,7 @@ swizzy_assistant_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
         "- When receiving results from specialized agents, log key outcomes ",
         "- Use appropriate tags to categorize your memories for easy retrieval ",
         "- Include links to relevant resources using the store_link tool",
-        "**CRITICAL: ALWAYS PONDER FIRST!**\",
+        "**CRITICAL: ALWAYS PONDER FIRST!**",
         "Before delegating ANY task, you MUST:",
         "1. Use the ponder_task tool to analyze the request",
         "2. Store the pondering results using store_memory",

@@ -11,6 +11,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates 
 from agents import Runner, RunContextWrapper, function_tool # Added RunContextWrapper, function_tool
+from app.context import TaskContext
 
 # Load environment variables first, before any other imports
 load_dotenv()
@@ -63,27 +64,6 @@ async def get_landing_page(request: Request):
     """Serves the index.html template."""
     return templates.TemplateResponse("index.html", {"request": request})
 
-
-@dataclass
-class TaskContext:
-    """Context object to be passed through agent runs, holding task-specific info."""
-    task_id: str
-    action_log: List[str] = field(default_factory=list)
-
-
-# --- Context Tools Definition ---
-
-@function_tool
-async def get_task_id(wrapper: RunContextWrapper[TaskContext]) -> str:
-    """Returns the unique ID for the current task."""
-    return wrapper.context.task_id
-
-@function_tool
-async def log_action(wrapper: RunContextWrapper[TaskContext], action_description: str) -> str:
-    """Logs a description of an action performed by the agent into the task context."""
-    wrapper.context.action_log.append(action_description)
-    logger.info(f"[Task {wrapper.context.task_id}] Logged action: {action_description}")
-    return f"Action logged: {action_description}"
 
 # --- Process Task Endpoint (Handles Swizzy Agent Interaction) ---
 @app.post("/process_task")
@@ -173,7 +153,7 @@ async def process_task(
         # Include task_id in error logging if available
         task_id_str = f"Task {task_context.task_id}: " if task_context else ""
         logger.exception(f"{task_id_str}Error processing task or files: {e}")
-        raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
+        raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {e}")
 
 
 

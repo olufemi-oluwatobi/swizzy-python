@@ -7,7 +7,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from openai import AsyncOpenAI
 # Import TaskContext and context tools from server
-from server import TaskContext, get_task_id, log_action
+from app.context import TaskContext, get_task_id, log_action
 from agents import Agent
 from agents import WebSearchTool, function_tool, OpenAIChatCompletionsModel, handoff, GuardrailFunctionOutput, RunContextWrapper, output_guardrail
 from dotenv import load_dotenv
@@ -89,7 +89,6 @@ gemini_model = OpenAIChatCompletionsModel(
     openai_client=client,
 )
 
-
 # --- Define Output Model ---
 class SwizzyOutput(BaseModel):
     reasoning: str = Field(description="Brief reasoning for the chosen action (tool use or handoff).")
@@ -164,8 +163,7 @@ spreadsheet_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
 ",
         "- Use store_memory for detailed reasoning or complex state preservation.
 ",
-        "- Include links to relevant resources using the store_link tool
-"
+        "- Include links to relevant resources using the store_link tool"
     ]),
     model=gemini_model,
     tools=[
