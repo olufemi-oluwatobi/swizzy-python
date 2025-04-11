@@ -206,7 +206,7 @@ async def chat(
 
 
         # --- Agent Execution (Pass the context) ---
-        result = await Runner.run(starting_agent, input=agent_run_input, context=task_context)
+        result = await Runner.run(starting_agent, input=agent_run_input, context=task_context, max_turns=25)
 
         # --- Log final context state ---
         logger.info(f"[Task {task_id}] Final action log: {task_context.action_log}")

@@ -1,0 +1,13 @@
+{
+  "title": "Task Analysis: Extract PDF Data to Spreadsheet",
+  "content": "The user wants to extract data from the attached PDF account statement 'account-statement_2025-02-01_2025-04-02_en-gb_e43bb2.pdf' and create a spreadsheet. The spreadsheet_specialist tool is the best option.",
+  "tags": [
+    "task_analysis",
+    "spreadsheet",
+    "pdf",
+    "data_extraction"
+  ],
+  "summary": "",
+  "links": [],
+  "timestamp": 1744408255.3350925
+}

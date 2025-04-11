@@ -7,7 +7,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from openai import AsyncOpenAI
 # Import TaskContext and context tools from server
-from app.context import TaskContext, get_task_id, log_action
+from app.context import TaskContext, get_task_id, log_action, inspect_context
 from agents import Agent
 from agents import WebSearchTool, function_tool, OpenAIChatCompletionsModel, handoff, GuardrailFunctionOutput, RunContextWrapper, output_guardrail
 from dotenv import load_dotenv
@@ -106,6 +106,7 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         "- create_spreadsheet: Use this to create new spreadsheets (filename MUST be `[task_id]_your_filename.xlsx`).",
         "- modify_spreadsheet: Use this to modify existing spreadsheets ",
         "- analyze_spreadsheet: Use this to perform complex analysis operations on spreadsheets ",
+        "- inspect_context: Use this to inspect the current context and understand the task better.  If a file is not found there is a likelihood tit was not provided to you check the context for provided files",
         "**CRITICAL RULES**: ",
         "1. NEVER skip the pondering step - ALWAYS call ponder_spreadsheet_request first ",
         "2. NEVER skip logging actions - use log_action for pondering and tool use.",
@@ -118,6 +119,7 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         "9. ALWAYS include the file handle in your tool calls - this is REQUIRED for the tools to work ",
         "10. ALWAYS return a file back to the requester so your output can be validated (using the task_id format for new files). ",
         "11. If you weren't provided a file, flag this in your response ",
+        "13. Always loog the handle of whatever file you create or modify so you can return it to the user",
         "12. You are a master with spreadsheets ie csv excel, data analytics etc, you must operate with a sense of excellence and agency. Fully utilize the tools at your disposal",
         # ...(rest of instructions remain the same)...
          "**EXAMPLES OF PROPER TOOL USAGE**: ",
@@ -140,6 +142,7 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         # Context Tools FIRST
         get_task_id,
         log_action,
+        inspect_context,
         # Core/Pondering Tools
         ponder_task,
         ponder_spreadsheet_request,  # Keep specific pondering tool if needed

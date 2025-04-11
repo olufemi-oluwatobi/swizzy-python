@@ -1,0 +1,10 @@
+{
+  "title": "Task Analysis: Extract Bank Statement to Excel",
+  "content": "The user wants me to read a PDF document, extract the bank statement information, and create an Excel file from it. I will need to use the document_specialist to read the PDF, then parse the text to identify the bank statement details. After that, I'll use the spreadsheet_specialist to create the Excel file. I should start by using the document_specialist to read the document and extract the text.",
+  "tags": [
+    "swizzy_task_analysis"
+  ],
+  "summary": "Analysis of the user request to extract bank statement data from a PDF and create an Excel file.",
+  "links": [],
+  "timestamp": 1744407407.5575757
+}

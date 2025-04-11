@@ -27,6 +27,6 @@ client = Client(
 )
 
 gemini_model = OpenAIChatCompletionsModel(
-    model=os.environ.get("GEMINI_MODEL_NAME", "gemini-1.5-flash"),
+    model=os.environ.get("GEMINI_MODEL_NAME", "gemini-2.0-flash"),
     openai_client=client
 )

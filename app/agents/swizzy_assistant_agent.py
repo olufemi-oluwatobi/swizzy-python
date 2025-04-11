@@ -6,8 +6,7 @@ import logging
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from openai import AsyncOpenAI
-# Import TaskContext and context tools from server
-from app.context import TaskContext, get_task_id, log_action
+from app.context import TaskContext, get_task_id, log_action,inspect_context
 from agents import Agent
 from agents import WebSearchTool, function_tool, OpenAIChatCompletionsModel, handoff, GuardrailFunctionOutput, RunContextWrapper, output_guardrail
 from dotenv import load_dotenv
@@ -78,8 +77,8 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # Verify environment variables and setup OpenAI client for Gemini
-api_key = os.getenv("GOOGLE_API_KEY") # Assuming Gemini uses GOOGLE_API_KEY based on prior context
-base_url = os.getenv("OPENAI_BASE_URL") # Assuming a proxy/custom base URL
+api_key = os.getenv("GOOGLE_API_KEY")
+base_url = os.getenv("OPENAI_BASE_URL")
 
 if not api_key or not base_url:
     raise ValueError("Missing required environment variables: GOOGLE_API_KEY and OPENAI_BASE_URL must be set")
@@ -92,7 +91,7 @@ client = AsyncOpenAI(
 
 # Create the model configuration for Gemini
 gemini_model = OpenAIChatCompletionsModel(
-    model="gemini-1.5-flash", # Updated to 1.5-flash as per previous context, adjust if needed
+    model="gemini-2.0-flash",
     openai_client=client,
 )
 
@@ -107,230 +106,92 @@ class SwizzyOutput(BaseModel):
     task_context_id: Optional[str] = Field(default=None, description="Unique ID for the current task context, if available.")
 
 # --- Define Orchestrator Agent --- - Updated with TaskContext and tools
-from __future__ import annotations
-
-import json
-import os
-import logging
-from typing import List, Optional
-from pydantic import BaseModel, Field
-from openai import AsyncOpenAI
-# Import TaskContext and context tools from server
-from app.context import TaskContext, get_task_id, log_action
-from agents import Agent
-from agents import WebSearchTool, function_tool, OpenAIChatCompletionsModel, handoff, GuardrailFunctionOutput, RunContextWrapper, output_guardrail
-from dotenv import load_dotenv
-
-# Import existing tools
-from app.swizzy_tools import (
-    create_document,
-    extract_text_from_image,
-    ponder_document_request,
-    read_file_content,
-)
-from app.tools import (
-    analyze_spreadsheet,
-    create_spreadsheet,
-    modify_spreadsheet,
-    ponder_spreadsheet_request,
-)
-from app.tools.content_tools import (
-    convert_pdf_to_markdown,
-    convert_to_markdown,
-    read_markdown,
-    edit_markdown_section,
-    analyze_content_structure,
-    convert_file_format,
-    create_markdown
-)
-from app.tools.web_tools import (
-    read_url,
-    extract_url_to_markdown,
-    search_web,
-    search_with_budget,
-    reset_search_budget,
-    get_search_cost_summary
-)
-from app.tools.research_tools import (
-    plan_research,
-    execute_research_plan,
-    research_topic
-)
-from app.tools.data_extraction_tools import (
-    extract_structured_data,
-    convert_json_to_excel,
-    extract_invoice_to_excel,
-    extract_table_from_document
-)
-from app.tools.memory_tools import (
-    store_memory,
-    retrieve_memory,
-    update_memory,
-    delete_memory,
-    search_memories,
-    store_link,
-    get_links_by_tag
-)
-from app.tools.core_tools import ponder_task
-from app.config import STYLE_INSTRUCTIONS
-
-# Import specialist agents
-from app.agents.document_agent import document_agent
-from app.agents.spreadsheet_agent import spreadsheet_agent
-from app.agents.research_agent import research_agent
-from app.agents.planner_agent import planner_agent
-from app.agents.validator_agent import validator_agent
-
-logger = logging.getLogger(__name__)
-
-# Load environment variables if not already loaded
-load_dotenv()
-
-# Verify environment variables and setup OpenAI client for Gemini
-api_key = os.getenv("GOOGLE_API_KEY") # Assuming Gemini uses GOOGLE_API_KEY based on prior context
-base_url = os.getenv("OPENAI_BASE_URL") # Assuming a proxy/custom base URL
-
-if not api_key or not base_url:
-    raise ValueError("Missing required environment variables: GOOGLE_API_KEY and OPENAI_BASE_URL must be set")
-
-# Create custom OpenAI client
-client = AsyncOpenAI(
-    api_key=api_key,
-    base_url=base_url
-)
-
-# Create the model configuration for Gemini
-gemini_model = OpenAIChatCompletionsModel(
-    model="gemini-2.0-flash", # Updated to 1.5-flash as per previous context, adjust if needed
-    openai_client=client,
-)
-
-# --- Define Output Model ---
-class SwizzyOutput(BaseModel):
-    reasoning: str = Field(description="Brief reasoning for the chosen action (tool use or handoff).")
-    action_taken: str = Field(description="Description of the action performed (e.g., 'Used read_file_content', 'Handed off to spreadsheet_agent', 'Executed analysis script').")
-    outcome: str = Field(description="Summary of the outcome (e.g., 'Success', 'Completed analysis', 'Error occurred', 'Handoff initiated').")
-    response_to_user: str = Field(description="The final message to convey to the user.")
-    generated_handles: Optional[List[str]] = Field(default=None, description="List of new file handles generated by a specialist agent, if any.")
-    error_details: Optional[str] = Field(default=None, description="Details of any error encountered during tool use or handoff, if applicable.")
-    task_context_id: Optional[str] = Field(default=None, description="Unique ID for the current task context, if available.")
-
-# --- Define Orchestrator Agent --- - Updated with TaskContext and tools
-swizzy_assistant_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
+swizzy_assistant_agent = Agent[TaskContext](
     name="Swizzy Assistant",
     instructions="".join([
-            "You are Swizzy, a proactive AI Task Orchestrator and expert problem-solving consultant. ",
-            "Your primary objective is to **fully resolve the user's request or problem**, utilizing all available tools and specialist agents. You are responsible for seeing the task through to completion.", # MODIFIED Goal
-            "You help users solve problems by **orchestrating** tasks, which may involve direct tool use (like pondering or memory) or delegating to specialized agents. ", # MODIFIED Role
-            "**CRITICAL: PROBLEM OWNERSHIP & ITERATION**: ", # NEW SECTION
-            "   - Your job is to get the user's problem solved. Don't just dispatch tasks; own the outcome.",
-            "   - Use **ALL** tools at your disposal, starting with `ponder_task`, to understand the request, formulate a plan, and execute it.",
-            "   - **Iterate if necessary.** If the first approach or delegation doesn't fully solve the problem, re-evaluate, re-ponder, potentially use different tools or delegate differently until the job is done or you identify a clear blocker.",
-            "   - **Do NOT simply hand off the problem back to the user prematurely.** Your role is to manage the solution process internally.",
-            "**COMMUNICATION PROTOCOL**: ", # NEW SECTION
-            "   - This is not a real-time hotline. Manage the workflow internally.",
-            "   - **Only communicate back to the user when:**",
-            "       1. The task is successfully completed.",
-            "       2. You are genuinely stuck and require specific feedback or clarification that prevents further progress.",
-            "       3. You encounter an unrecoverable error and need to report it.",
-            "   - Avoid giving incremental updates unless the task is exceptionally long and requires pre-planned checkpoints.",
-            "You MUST log your key decisions, tool usage, and handoffs using the `log_action` tool.", # Logging emphasized
-            "You can use `get_task_id` to reference the current task.",
-            "**CRITICAL: ALWAYS PONDER FIRST!**", # Pondering remains critical
-            "Before taking ANY significant action (like delegating or complex tool use), you MUST:",
-            "1. Use the `ponder_task` tool to analyze the request and determine the best approach (which might involve multiple steps or specialists).",
-            "2. Store the pondering results using `store_memory`.",
-            "3. Log the pondering outcome using `log_action`.",
-            "4. Follow the recommended approach from pondering.",
-            "5. Only then execute the plan (e.g., delegate to specialist agents if needed, log the delegation).",
-            "**ORCHESTRATION WORKFLOW**: ", # Renamed and slightly adjusted
-            "1. Receive the user's request.",
-            "2. **MANDATORY**: Use `ponder_task` to analyze, plan, and determine the execution strategy (log action).",
-            "3. Execute the plan: This might involve using memory tools, directly calling a specialist agent tool, or a sequence of actions (log actions).",
-            "4. Evaluate the results from tools/agents. Does it solve the problem?",
-            "5. **Iterate if needed**: If incomplete, go back to step 2 or 3 with refined context/goals (log decision).",
-            "6. Once complete, stuck, or error encountered: Compile the final results/status into a comprehensive response (log action).",
-            "7. Return the final response to the user per the Communication Protocol.",
-            "**IMPORTANT: LOGGING ACTIONS AND DECISIONS**: ", # Logging details remain
-            "- ALWAYS log your significant actions and decisions using the `log_action` tool ",
-            "- When delegating tasks, store the reasoning behind your agent selection ",
-            "- When receiving results from specialized agents, log key outcomes ",
-            "- Log decisions to iterate or change approach.",
-            "- Use appropriate tags to categorize your memories for easy retrieval ",
-            "- Include links to relevant resources using the `store_link` tool",
-        ]),
-        model=gemini_model,
-        tools=[
-            # Context Tools FIRST
-            get_task_id,
-            log_action,
-            # Core/Pondering Tools
-            ponder_task,
-            # Memory tools
-            store_memory,
-            retrieve_memory,
-            update_memory,
-            delete_memory,
-            search_memories,
-            store_link,
-            get_links_by_tag,
-            # Specialist Agent Tools (as_tool correctly handles context passing)
-            document_agent.as_tool(
-                tool_name="document_specialist",
-                tool_description="Use for tasks involving specific document files (.txt, .md, .pdf, .docx, images): reading, creating [task_id]_filename.ext, editing, converting, extracting text. Always logs actions.",
-            ),
-            spreadsheet_agent.as_tool(
-                tool_name="spreadsheet_specialist",
-                tool_description="Use for tasks involving specific spreadsheet files (.xlsx, .csv): reading, analyzing, creating [task_id]_filename.ext, modifying data. Always ponders first and logs actions.",
-            ),
-            research_agent.as_tool(
-                tool_name="research_specialist",
-                tool_description="Use for tasks requiring web research, topic exploration, or generating research reports ([task_id]_filename.md). Always logs actions.",
-            ),
-            planner_agent.as_tool(
-                tool_name="planner_specialist",
-                tool_description="Use for tasks requiring the creation of detailed, structured plans ([task_id]_plan.md) with steps, dependencies, and success criteria. Always logs actions.",
-            ),
-            validator_agent.as_tool(
-                tool_name="validator_specialist",
-                tool_description="Use to evaluate task outcomes, agent performance, or document quality against specified criteria or success metrics. Always logs actions.",
-            ),
-        ],
-        model=gemini_model,
-        tools=[
-            # Context Tools FIRST
-            get_task_id,
-            log_action,
-            # Core/Pondering Tools
-            ponder_task,
-            # Memory tools
-            store_memory,
-            retrieve_memory,
-            update_memory,
-            delete_memory,
-            search_memories,
-            store_link,
-            get_links_by_tag,
-            # Specialist Agent Tools (as_tool correctly handles context passing)
-            document_agent.as_tool(
-                tool_name="document_specialist",
-                tool_description="Process document-related tasks (reads, creates [task_id]_filename.ext, edits .txt/.md/.pdf/.docx files, logs actions)",
-            ),
-            spreadsheet_agent.as_tool(
-                tool_name="spreadsheet_specialist",
-                tool_description="Process spreadsheet-related tasks (ponders first, then reads, analyzes, creates [task_id]_filename.ext, modifies .xlsx/.csv files, logs actions)",
-            ),
-            research_agent.as_tool(
-                tool_name="research_specialist",
-                tool_description="Perform comprehensive research on topics and create structured reports ([task_id]_filename.md, logs actions)",
-            ),
-            planner_agent.as_tool(
-                tool_name="planner_specialist",
-                tool_description="Create comprehensive plans ([task_id]_plan.md) for tasks with steps, dependencies, success criteria, logs actions",
-            ),
-            validator_agent.as_tool(
-                tool_name="validator_specialist",
-                tool_description="Evaluate task outcomes against success criteria and provide objective assessments, logs actions",
-            ),
-        ],
+        "You are Swizzy, a proactive AI Task Orchestrator and expert problem-solving consultant. ",
+        "Your primary objective is to **fully resolve the user's request or problem**, utilizing all available tools and specialist agents. You are responsible for seeing the task through to completion.", # MODIFIED Goal
+        "You help users solve problems by **orchestrating** tasks, which may involve direct tool use (like pondering or memory) or delegating to specialized agents. ", # MODIFIED Role
+        "**CRITICAL: PROBLEM OWNERSHIP & ITERATION**: ", # NEW SECTION
+        "   - Your job is to get the user's problem solved. Don't just dispatch tasks; own the outcome.",
+        "   - Use **ALL** tools at your disposal, starting with `ponder_task`, to understand the request, formulate a plan, and execute it.",
+        "   - **Iterate if necessary.** If the first approach or delegation doesn't fully solve the problem, re-evaluate, re-ponder, potentially use different tools or delegate differently until the job is done or you identify a clear blocker.",
+        "   - **Do NOT simply hand off the problem back to the user prematurely.** Your role is to manage the solution process internally.",
+        "**COMMUNICATION PROTOCOL**: ", # NEW SECTION
+        "   - This is not a real-time hotline. Manage the workflow internally.",
+        "   - **Only communicate back to the user when:**",
+        "       1. The task is successfully completed.",
+        "       2. You are genuinely stuck and require specific feedback or clarification that prevents further progress.",
+        "       3. You encounter an unrecoverable error and need to report it.",
+        "   - Avoid giving incremental updates unless the task is exceptionally long and requires pre-planned checkpoints.",
+        "You MUST log your key decisions, tool usage, and handoffs using the `log_action` tool.", # Logging emphasized
+        "You can use `get_task_id` to reference the current task.",
+        "**CRITICAL: ALWAYS PONDER FIRST!**", # Pondering remains critical
+        "Before taking ANY significant action (like delegating or complex tool use), you MUST:",
+        "1. Use the `ponder_task` tool to analyze the request and determine the best approach (which might involve multiple steps or specialists).",
+        "2. Store the pondering results using `store_memory`.",
+        "3. Log the pondering outcome using `log_action`.",
+        "4. Follow the recommended approach from pondering.",
+        "5. Only then execute the plan (e.g., delegate to specialist agents if needed, log the delegation).",
+        "**ORCHESTRATION WORKFLOW**: ", # Renamed and slightly adjusted
+        "1. Receive the user's request.",
+        "2. **MANDATORY**: Use `ponder_task` to analyze, plan, and determine the execution strategy (log action).",
+        "3. Execute the plan: This might involve using memory tools, directly calling a specialist agent tool, or a sequence of actions (log actions).",
+        "4. Evaluate the results from tools/agents. Does it solve the problem?",
+        "5. **Iterate if needed**: If incomplete, go back to step 2 or 3 with refined context/goals (log decision).",
+        "6. Once complete, stuck, or error encountered: Compile the final results/status into a comprehensive response (log action).",
+        "7. Return the final response to the user per the Communication Protocol.",
+        "8 Always pass down the right file never hallucinate file to pass down",
+        "9. If a tool is sthrowinng ann eror annd you ancna  help it solve it, do so.",
+        "10. Never hallucinate the file handler url also you must never forget to pass th file handler url to the tool",
+        "11. Failure to create a file handler url will cause the tool to fail",
+        "12 attached_document.pdf (instead of the right file handler name) is a common hallucination issue that you must avoid"
+        "**IMPORTANT: LOGGING ACTIONS AND DECISIONS**: ", # Logging details remain
+        "- ALWAYS log your significant actions and decisions using the `log_action` tool",
+        "- Log every handler passed to tools or recieved from tools",
+        "- When delegating tasks, store the reasoning behind your agent selection ",
+        "- When receiving results from specialized agents, log key outcomes ",
+        "- Log decisions to iterate or change approach.",
+        "- Use inspect context tool to review the current task context and memory state. use it to find current tass informaion",
+        "- Use appropriate tags to categorize your memories for easy retrieval ",
+        "- Include links to relevant resources using the `store_link` tool",
+    ]),
+    model=gemini_model,
+    tools=[
+        # Context Tools FIRST
+        get_task_id,
+        log_action,
+        # Core/Pondering Tools
+        ponder_task,
+        # Memory tools
+        store_memory,
+        retrieve_memory,
+        update_memory,
+        delete_memory,
+        search_memories,
+        store_link,
+        inspect_context,
+        get_links_by_tag,
+        # Specialist Agent Tools
+        document_agent.as_tool(
+            tool_name="document_specialist",
+            tool_description="Process document-related tasks (reads, creates [task_id]_filename.ext, edits .txt/.md/.pdf/.docx files, logs actions)",
+        ),
+        spreadsheet_agent.as_tool(
+            tool_name="spreadsheet_specialist",
+            tool_description="Process spreadsheet-related tasks (ponders first, then reads, analyzes, creates [task_id]_filename.ext, modifies .xlsx/.csv files, logs actions) Can extract tables from images and pdfs, use to exctract table structured data. It can process pdf files too",
+        ),
+        research_agent.as_tool(
+            tool_name="research_specialist",
+            tool_description="Perform comprehensive research on topics and create structured reports ([task_id]_filename.md, logs actions)",
+        ),
+        planner_agent.as_tool(
+            tool_name="planner_specialist",
+            tool_description="Create comprehensive plans ([task_id]_plan.md) for tasks with steps, dependencies, success criteria, logs actions",
+        ),
+        validator_agent.as_tool(
+            tool_name="validator_specialist",
+            tool_description="Evaluate task outcomes against success criteria and provide objective assessments, logs actions",
+        ),
+    ],
 )

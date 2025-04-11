@@ -1,0 +1,10 @@
+{
+  "title": "Task Analysis: Extract data from PDF",
+  "content": "The user wants to extract data from a PDF document. I should use the spreadsheet specialist to handle this since it can extract tables from PDFs. I will then respond to the user with the extracted data, and log the action.",
+  "tags": [
+    "swizzy_task_analysis"
+  ],
+  "summary": "Analysis of the user's request to extract data from a PDF.",
+  "links": [],
+  "timestamp": 1744407882.977087
+}
