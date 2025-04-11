@@ -99,6 +99,8 @@ async def process_task(
             agent_input = task
         logger.info(f"Agent input: {agent_input}")
 
+
+        print(f"Running starting agent with input string: '{agent_input}'")
         # --- Agent Interaction ---
         result = await Runner.run(starting_agent, input=agent_input)
 

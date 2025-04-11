@@ -1,0 +1,12 @@
+{
+  "title": "Task analysis: Summarize spreadsheet",
+  "content": "The user wants to summarize the spreadsheet Apricots-2022 (1).xlsx. The plan is to first read the file to understand its content and then use analyze_spreadsheet to create a summary.",
+  "tags": [
+    "spreadsheet",
+    "summarization",
+    "analysis"
+  ],
+  "summary": "Task analysis for summarizing a spreadsheet",
+  "links": [],
+  "timestamp": 1744389572.0801945
+}

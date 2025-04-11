@@ -1,0 +1,12 @@
+{
+  "title": "Spreadsheet Summarization Task Analysis",
+  "content": "The user wants to summarize the excel file. I should use the read_file_content tool to read the data and then analyze_spreadsheet tool to get the summary. Finally, I should respond to the user with the summary.",
+  "tags": [
+    "spreadsheet",
+    "summarization",
+    "analysis"
+  ],
+  "summary": "Analysis of how to summarize the excel file.",
+  "links": [],
+  "timestamp": 1744389335.281706
+}

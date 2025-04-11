@@ -1,0 +1,11 @@
+{
+  "title": "Summary of spreadsheet_1744011448679_enhanced_people-100.xlsx",
+  "content": "The file contains three sheets: \"Sheet\", \"JobTitles\", and \"Summary\". The \"Sheet\" sheet contains information about 100 individuals, with columns for Index, User ID, First Name, Last Name, Sex, Email, Phone, Date of birth, and Job Title. The \"JobTitles\" sheet appears to list job titles with a Job Title ID. The \"Summary\" sheet includes fields to filter by Job Title and displays the number of people in the selected job using a COUNTIFS formula. The formula references the 'Sheet' sheet and the selected job title in cell B1 of the 'Summary' sheet.",
+  "tags": [
+    "excel",
+    "summary"
+  ],
+  "summary": "",
+  "links": [],
+  "timestamp": 1744390679.8070698
+}

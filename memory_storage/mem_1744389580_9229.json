@@ -1,0 +1,11 @@
+{
+  "title": "Request CSV format",
+  "content": "The spreadsheet specialist and document specialist were unable to directly process the .xlsx file. I need to request the user to provide the data in CSV format.",
+  "tags": [
+    "file_format",
+    "csv_request"
+  ],
+  "summary": "Inability to process .xlsx, requesting CSV format",
+  "links": [],
+  "timestamp": 1744389580.6029286
+}

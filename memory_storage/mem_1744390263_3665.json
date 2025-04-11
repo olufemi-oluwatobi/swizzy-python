@@ -1,0 +1,12 @@
+{
+  "title": "Inability to summarize .xlsx file directly",
+  "content": "Neither Spreadsheet Specialist nor Document Specialist can directly summarize .xlsx files. Need to request user to convert to .csv or .txt.",
+  "tags": [
+    "file_conversion",
+    "xlsx",
+    "summary"
+  ],
+  "summary": "Documented the inability to directly summarize .xlsx files and the need for file conversion.",
+  "links": [],
+  "timestamp": 1744390263.6090434
+}

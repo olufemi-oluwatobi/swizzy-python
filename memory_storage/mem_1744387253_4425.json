@@ -1,0 +1,12 @@
+{
+  "title": "Request to describe excel file",
+  "content": "Read the excel file email_list_template.xlsx and describe its content including the sheet names and the columns in each sheet.",
+  "tags": [
+    "excel",
+    "read file",
+    "describe"
+  ],
+  "summary": "",
+  "links": [],
+  "timestamp": 1744387253.5248446
+}

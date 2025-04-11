@@ -2,7 +2,7 @@ import os
 import logging
 import io # Import io for BytesIO
 import pandas as pd # Import pandas
-from app.services import storage_service  # Import shared service instance
+from app.services.storage_service import storage_service  # Import shared service instance
 from pypdf import PdfReader
 import docx # python-docx library
 from agents import function_tool # Import the decorator
@@ -71,6 +71,7 @@ def read_file_content(file_handle: str) -> str:
         The content of the file as text.
     """
     logger.info(f"Reading file content for handle: {file_handle}")
+    print(f"Reading file content for handle: {file_handle}")
     
     try:
         # Get the file bytes from storage
@@ -132,7 +133,7 @@ def read_file_content(file_handle: str) -> str:
                         
                         combined_text.append(sheet_text)
                 
-                text_content = combined_text.strip()
+                text_content = "\n\n".join(combined_text)  # Join sheets with double newlines
                 logger.info(f"Successfully read XLSX content from handle: {file_handle}")
             except Exception as e:
                 logger.error(f"Error reading Excel file '{file_handle}': {e}")

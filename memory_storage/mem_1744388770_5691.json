@@ -1,0 +1,12 @@
+{
+  "title": "Task analysis: Summarize spreadsheet",
+  "content": "The user wants to summarize the contents of the file generated_spreadsheet (1).xlsx. I should use the spreadsheet_specialist to accomplish this task.",
+  "tags": [
+    "spreadsheet",
+    "summarize",
+    "task_analysis"
+  ],
+  "summary": "Task analysis for summarizing a spreadsheet",
+  "links": [],
+  "timestamp": 1744388770.3698301
+}

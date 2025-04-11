@@ -1,0 +1,11 @@
+{
+  "title": "Task Analysis: Summarize Spreadsheet",
+  "content": "The user wants to summarize the spreadsheet Apricots-2022 (1).xlsx. I should use the spreadsheet_specialist to handle this task.",
+  "tags": [
+    "task_analysis",
+    "spreadsheet_summary"
+  ],
+  "summary": "Analysis of user request to summarize a spreadsheet.",
+  "links": [],
+  "timestamp": 1744389569.3783922
+}

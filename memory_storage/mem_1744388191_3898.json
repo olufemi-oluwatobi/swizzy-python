@@ -1,0 +1,11 @@
+{
+  "title": "Task analysis: Summarize excel file",
+  "content": "The user wants to summarize the excel file processed_enhanced_people-100.xlsx. The best approach is to first read the file content using read_file_content tool and then analyze the data using analyze_spreadsheet tool with summary_stats operation to provide a summary of the data.",
+  "tags": [
+    "spreadsheet_agent",
+    "task_analysis"
+  ],
+  "summary": "Task analysis for summarizing excel file",
+  "links": [],
+  "timestamp": 1744388191.2866926
+}

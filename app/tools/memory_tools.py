@@ -255,6 +255,7 @@ def store_memory(title: str, content: str, tags: str = "", summary: str = "", li
         The memory ID if successful, or an error message
     """
     logger.info(f"Storing new memory: {title}")
+    print(f"Storing new memory: {title}")
     
     # Parse tags
     tag_list = [tag.strip() for tag in tags.split(",")] if tags else []
