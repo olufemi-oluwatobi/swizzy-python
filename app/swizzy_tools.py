@@ -361,3 +361,34 @@ def extract_spreadsheet_from_document(file_handle: str, extraction_instruction: 
     except Exception as e:
         logger.exception(f"Error extracting spreadsheet data: {e}")
         return f"Error processing document: {str(e)}"
+
+@function_tool
+def execute_python_script(script: str, input_data: str = "{}") -> str:
+    """
+    Executes a Python script in a controlled environment with provided input data.
+    
+    Args:
+        script: The Python script to execute
+        input_data: JSON string containing input data for the script
+    
+    Returns:
+        JSON string containing execution results and output file handles
+    """
+    try:
+        from app.services.script_execution_service import ScriptExecutionService
+        
+        # Parse input data
+        input_dict = json.loads(input_data)
+        
+        # Execute script
+        executor = ScriptExecutionService()
+        result = executor.execute_script(script, input_dict)
+        
+        return json.dumps(result, indent=2)
+        
+    except Exception as e:
+        return json.dumps({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        })

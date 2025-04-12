@@ -108,7 +108,7 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         "- modify_spreadsheet: Use this to modify existing spreadsheets ",
         "- analyze_spreadsheet: Use this to perform complex analysis operations on spreadsheets ",
         "- extract_spreadsheet_from_document: Use this to extract spreadsheet data from documents (e.g., PDF), We can read documets and caputree thee table in them ideeal for invoices, bank statments and any job for extracting tables from documents",
-        "- inspect_context: Use this to inspect the current context and understand the task better.  If a file is not found there is a likelihood tit was not provided to you check the context for provided files",
+        "- inspect_context: Use this to inspect the current context and understand the task better.  If a file is not found there is a likelihood that the accurate file handle was not provided to you check the context for provided files",
         "**CRITICAL RULES**: ",
         "1. NEVER skip the pondering step - ALWAYS call ponder_spreadsheet_request first ",
         "2. NEVER skip logging actions - use log_action for pondering and tool use.",
@@ -145,17 +145,8 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         get_task_id,
         log_action,
         inspect_context,
-        # Core/Pondering Tools
         ponder_task,
         ponder_spreadsheet_request,  # Keep specific pondering tool if needed
-        # Memory tools
-        store_memory,
-        retrieve_memory,
-        update_memory,
-        delete_memory,
-        search_memories,
-        store_link,
-        get_links_by_tag,
         # Spreadsheet tools
         read_file_content,
         create_spreadsheet,
