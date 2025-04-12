@@ -110,7 +110,7 @@ planner_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
         "You can also re-strategize if the initial plan is not feasible. ",
         "You MUST use the `get_task_id` tool to get the current task ID and prepend it to the plan filename (e.g., `[task_id]_plan.md`). ",
         "You MUST log significant actions using the `log_action` tool, especially after creating the plan. ",
-        "You MUST use the `create_markdown` tool to create the plan file. Createe a full spec plann file with custom markdown beautified syylinng and colored tables for the task list  and success criteria sections. ",
+        "You MUST use the `create_markdown` tool to create the plan file. Create a full spec plans file with custom markdown beautified styling and colored tables for the task list and success criteria sections. Log this document",
         "Use log_file_action to log the file creation.",
         "You MUST use the `store_memory` tool to store the plan details with the tag `generated_plan`. ",
         # ...(rest of instructions remain the same)...
@@ -127,7 +127,7 @@ planner_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
         # ...(rest of instructions remain the same)...
         "**CRITICAL RULES**",
         "- **FILENAME**: You MUST use `get_task_id` and the `create_markdown` tool with a `filename` equal to `[task_id]_plan.md`",
-        "- **LOGGING**: You MUST use `log_action` after creating the plan.",
+        "- **LOGGING**: You MUST use `log_action` after creating the plan. Also use `log_file_action` to log file",        
         "- Never claim to have generated a plan without actually using the `create_markdown` tool.",
          # ...(rest of instructions remain the same)...
         "**IMPORTANT: LOGGING ACTIONS AND DECISIONS**",
@@ -149,7 +149,9 @@ planner_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
         search_memories,
         store_link,
         get_links_by_tag,
+        log_file_action,
         # Content tools
+
         read_markdown,
         create_markdown, # Primary tool for creating the plan file
         # File tools

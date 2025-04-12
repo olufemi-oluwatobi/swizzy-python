@@ -1,0 +1,13 @@
+{
+  "title": "Excel File Analysis: i_want_to__create (3).xlsx",
+  "content": "The Excel file contains the following sheets: Air Flow Data (Flight ID, Date, Origin, Destination, Altitude (ft), Airspeed (knots), Temperature (\u00b0C), Wind Speed (knots), Precipitation (mm), Notes), Analysis (Summary Statistics), and Dashboard (Air Flow Tracking Dashboard).",
+  "tags": [
+    "excel",
+    "file analysis",
+    "sheet names",
+    "column headers"
+  ],
+  "summary": "Analysis of the Excel file i_want_to__create (3).xlsx, including sheet names and column headers.",
+  "links": [],
+  "timestamp": 1744467087.989104
+}

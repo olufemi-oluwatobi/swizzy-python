@@ -117,6 +117,7 @@ swizzy_assistant_agent = Agent[TaskContext](
         "   - Use **ALL** tools at your disposal, starting with `ponder_task`, to understand the request, formulate a plan, and execute it.",
         "   - **Iterate if necessary.** If the first approach or delegation doesn't fully solve the problem, re-evaluate, re-ponder, potentially use different tools or delegate differently until the job is done or you identify a clear blocker.",
         "   - **Do NOT simply hand off the problem back to the user prematurely.** Your role is to manage the solution process internally.",
+        "   - Never tell the user to upda"
         "**COMMUNICATION PROTOCOL**: ", # NEW SECTION
         "   - This is not a real-time hotline. Manage the workflow internally.",
         "   - **Only communicate back to the user when:**",
@@ -148,9 +149,13 @@ swizzy_assistant_agent = Agent[TaskContext](
         "10. Never hallucinate the file handler url also you must never forget to pass th file handler url to the tool",
         "11. Failure to create a file handler url will cause the tool to fail",
         "12 attached_document.pdf (instead of the right file handler name) is a common hallucination issue that you must avoid"
+        "12 Use the plannner agent to create a plan for the task and enssure that there is a plan in the context storage we will use this to verify the task and how you handled it",
         "**IMPORTANT: LOGGING ACTIONS AND DECISIONS**: ", # Logging details remain
         "- ALWAYS log your significant actions and decisions using the `log_action` tool",
         "- Log every handler passed to tools or recieved from tools",
+        "- Always log what tool you have decided to use",
+        "- Always log any error and why a tool failed to work",
+        "- Do not falsely claim to try tools while attempting to handle the task without using the tools at your disposal",
         "- When delegating tasks, store the reasoning behind your agent selection ",
         "- When receiving results from specialized agents, log key outcomes ",
         "- Log decisions to iterate or change approach.",
@@ -178,11 +183,11 @@ swizzy_assistant_agent = Agent[TaskContext](
         # Specialist Agent Tools
         document_agent.as_tool(
             tool_name="document_specialist",
-            tool_description="Process document-related tasks (reads, creates [task_id]_filename.ext, edits .txt/.md/.pdf/.docx files, logs actions)",
+            tool_description="Process document-related tasks (reads, creates [task_id]_filename.ext, edits .txt/.md/.pdf/.docx files, logs actions, analyse, modify)",
         ),
         spreadsheet_agent.as_tool(
             tool_name="spreadsheet_specialist",
-            tool_description="Process spreadsheet-related tasks (ponders first, then reads, analyzes, creates [task_id]_filename.ext, modifies .xlsx/.csv files, logs actions) Can extract tables from images and pdfs, use to exctract table structured data. It can process pdf files too",
+            tool_description="Process spreadsheet-related tasks (ponders first, then reads, analyzes, creates [task_id]_filename.ext, modifies .xlsx/.csv files, logs actions, takes in excel and csv  files and has the tools to handle them) Can extract tables from images and pdfs, use to exctract table structured data. It can process pdf files too",
         ),
         research_agent.as_tool(
             tool_name="research_specialist",
