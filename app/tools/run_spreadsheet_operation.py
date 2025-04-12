@@ -1,6 +1,9 @@
 from typing import List, Dict
 from app.services.script_execution_service import ScriptExecutionService
-from app.tools.data_extraction_tools import extract_spreadsheet_data
+from app.tools.data_extraction_tools import extract_structured_data
+from app.services.storage_service import storage_service
+import pandas as pd
+import io
 
 
 def run_spreadsheet_operation(instruction: str, file_path: str) -> str:
@@ -15,8 +18,14 @@ def run_spreadsheet_operation(instruction: str, file_path: str) -> str:
         The output of the script execution.
     """
 
-    # 1. Extract data and metadata about the Excel file
-    spreadsheet_data = extract_spreadsheet_data(file_path)
+    # 1. Read the file content
+    try:
+        file_bytes = storage_service.download_file(file_path)
+        excel_io = io.BytesIO(file_bytes)
+        df = pd.read_excel(excel_io)
+        spreadsheet_data = df.to_dict(orient='records')
+    except Exception as e:
+        return f"Error reading spreadsheet: {e}"
 
     # 2. Generate a script based on the instruction and spreadsheet_data
     script_execution_service = ScriptExecutionService()
