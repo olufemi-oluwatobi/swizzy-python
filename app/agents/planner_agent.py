@@ -7,7 +7,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from openai import AsyncOpenAI
 # Import TaskContext and context tools from server
-from app.context import TaskContext, get_task_id, log_action
+from app.context import TaskContext, get_task_id, log_action,log_file_action, inspect_context
 from agents import Agent
 from agents import WebSearchTool, function_tool, OpenAIChatCompletionsModel, handoff, GuardrailFunctionOutput, RunContextWrapper, output_guardrail
 from dotenv import load_dotenv
@@ -110,6 +110,9 @@ planner_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
         "You can also re-strategize if the initial plan is not feasible. ",
         "You MUST use the `get_task_id` tool to get the current task ID and prepend it to the plan filename (e.g., `[task_id]_plan.md`). ",
         "You MUST log significant actions using the `log_action` tool, especially after creating the plan. ",
+        "You MUST use the `create_markdown` tool to create the plan file. Createe a full spec plann file with custom markdown beautified syylinng and colored tables for the task list  and success criteria sections. ",
+        "Use log_file_action to log the file creation.",
+        "You MUST use the `store_memory` tool to store the plan details with the tag `generated_plan`. ",
         # ...(rest of instructions remain the same)...
         "**WORKFLOW**: ",
         "1. When given a task, first analyze it to understand the requirements (log action).",

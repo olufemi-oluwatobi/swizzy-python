@@ -6,7 +6,7 @@ import logging
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from openai import AsyncOpenAI
-from app.context import TaskContext, get_task_id, log_action,inspect_context
+from app.context import TaskContext, get_task_id, log_action,inspect_context, log_file_action
 from agents import Agent
 from agents import WebSearchTool, function_tool, OpenAIChatCompletionsModel, handoff, GuardrailFunctionOutput, RunContextWrapper, output_guardrail
 from dotenv import load_dotenv
@@ -124,7 +124,9 @@ swizzy_assistant_agent = Agent[TaskContext](
         "       2. You are genuinely stuck and require specific feedback or clarification that prevents further progress.",
         "       3. You encounter an unrecoverable error and need to report it.",
         "   - Avoid giving incremental updates unless the task is exceptionally long and requires pre-planned checkpoints.",
-        "You MUST log your key decisions, tool usage, and handoffs using the `log_action` tool.", # Logging emphasized
+        "You MUST log your key decisions, tool usage, and handoffs using the `log_action` tool.",
+        "Use Log file action `log_file_action` to log the file handler url and the file name you are passing to the tool",
+        "You MUST use the `get_task_id` tool to get the current task ID and prepend it to any filename you create (e.g., `[task_id]_filename.ext`).",
         "You can use `get_task_id` to reference the current task.",
         "**CRITICAL: ALWAYS PONDER FIRST!**", # Pondering remains critical
         "Before taking ANY significant action (like delegating or complex tool use), you MUST:",
@@ -172,6 +174,7 @@ swizzy_assistant_agent = Agent[TaskContext](
         store_link,
         inspect_context,
         get_links_by_tag,
+        log_file_action,
         # Specialist Agent Tools
         document_agent.as_tool(
             tool_name="document_specialist",

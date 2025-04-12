@@ -1,0 +1,12 @@
+{
+  "title": "Task analysis for summarizing account statement",
+  "content": "The user wants a summary of the attached XLSX file (account_statement_data.xlsx). I will use the spreadsheet specialist to handle the task and instruct it to summarize the data in the file.",
+  "tags": [
+    "swizzy_task_analysis",
+    "spreadsheet",
+    "summary"
+  ],
+  "summary": "Analysis of the task to summarize the account statement data.",
+  "links": [],
+  "timestamp": 1744456445.5005162
+}

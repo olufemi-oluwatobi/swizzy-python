@@ -7,7 +7,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from openai import AsyncOpenAI
 # Import TaskContext and context tools from server
-from app.context import TaskContext, get_task_id, log_action
+from app.context import TaskContext, get_task_id, log_action,  log_file_action, inspect_context
 from agents import Agent
 from agents import WebSearchTool, function_tool, OpenAIChatCompletionsModel, handoff, GuardrailFunctionOutput, RunContextWrapper, output_guardrail
 from dotenv import load_dotenv
@@ -136,6 +136,8 @@ document_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
         "4. NEVER claim to have read, created, or modified a file without ACTUALLY CALLING THE CORRESPONDING TOOL ",
         "5. NEVER make up fake data or pretend to analyze a file you haven't read with the tool ",
         "6. NEVER tell clients to wait - either complete the task with your tools or report an error ",
+        "7. Use `log_action` to log significant actions and decisions.",
+        "8. Use `log_file_action` to log file-specific actions. e all crearted modified files are logged",
         "For each request type: ",
         "- GET TASK ID: Use get_task_id before creating any file.",
         "- LOG ACTION: Use log_action after pondering and after using a main tool.",
@@ -166,6 +168,7 @@ document_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
         search_memories,
         store_link,
         get_links_by_tag,
+        log_file_action,
          # Document/Content tools
         read_file_content, # Keep general read
         create_document, # Keep general create? Maybe remove if create_markdown is primary

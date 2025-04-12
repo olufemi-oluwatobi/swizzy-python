@@ -10,10 +10,6 @@ from io import BytesIO
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from ..tools.spreadsheet_tools import create_spreadsheet, modify_spreadsheet
-from sklearn import (
-    preprocessing, metrics, model_selection, cluster, decomposition, 
-    ensemble, linear_model, neighbors, svm, tree
-)
 import base64
 import docx
 from openpyxl import Workbook, load_workbook

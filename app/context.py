@@ -32,24 +32,78 @@ async def inspect_context(wrapper: RunContextWrapper[TaskContext], agentName: st
     return str(wrapper.context)
 
 @function_tool
-async def log_action(wrapper: RunContextWrapper[TaskContext], action_description: str, agent_name: str, file_handle: Optional[str] = None, description: Optional[str] = None) -> str:
-    """Logs a description of an action performed by the agent into the task context."""
-    # Log the action with the agent name and task ID
+async def log_action(
+    wrapper: RunContextWrapper[TaskContext],
+    action_description: str,
+    agent_name: str,
+) -> str:
+    """
+    Logs a description of an action performed by the agent into the task context.
+    
+    Args:
+        wrapper: The wrapper containing the task context.
+            Schema: { "type": "object" }
+        action_description: A description of the action performed.
+            Schema: { "type": "string" }
+        agent_name: The name of the agent performing the action.
+            Schema: { "type": "string" }
+        file_handle: An optional file handle associated with the action.
+            Schema: { "type": "string", "optional": true }
+        file_description: An optional description of the file.
+            Schema: { "type": "string", "optional": true }
+    
+    Returns:
+        A message confirming that the action has been logged.
+            Schema: { "type": "string" }
+    """
+    print('Logging action...')
     print(f"[Task {wrapper.context.task_id}] Agent: {agent_name}, Logging action: {action_description}")
     log_entry = {
         "agent": agent_name,
         "action": action_description,
     }
-    if file_handle:
-        log_entry["file_handle"] = file_handle
-    if description:
-        log_entry["description"] = description
-
     wrapper.context.action_log.append(log_entry)
 
     logger.info(f"[Task {wrapper.context.task_id}] Logged action: {action_description}")
     return f"Action logged: {action_description}"
 
+
+@function_tool
+async def log_file_action(
+    wrapper: RunContextWrapper[TaskContext],
+    file_handle: str,
+    file_description: str,
+    agent_name: str,
+) -> str:
+    """
+    Logs a file action performed by the agent into the task context.
+    
+    Args:
+        wrapper: The wrapper containing the task context.
+            Schema: { "type": "object" }
+        file_handle: The handle of the file associated with the action.
+            Schema: { "type": "string" }
+        file_description: A description of the file.
+            Schema: { "type": "string" }
+        agent_name: The name of the agent performing the action.
+            Schema: { "type": "string" }
+    
+    Returns:
+        A message confirming that the file action has been logged.
+            Schema: { "type": "string" }
+    """
+    print('Logging file action...')
+    print(f"[Task {wrapper.context.task_id}] Agent: {agent_name}, Logging file action for handle: {file_handle}")
+    log_entry = {
+        "action": "file_action",
+        "agent": agent_name,
+        "file_handle": file_handle,
+        "file_description": file_description,
+    }
+    wrapper.context.action_log.append(log_entry)
+
+    logger.info(f"[Task {wrapper.context.task_id}] Logged file action for handle: {file_handle}")
+    return f"File action logged for handle: {file_handle}"
 @function_tool
 async def get_files(wrapper: RunContextWrapper[TaskContext]) -> str:
     """Returns a list of files with their descriptions from the task context."""

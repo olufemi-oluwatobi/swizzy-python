@@ -1,0 +1,12 @@
+{
+  "title": "Financial Analysis Report",
+  "content": "Analyzed account statement data, calculated total inflow and outflow, identified potential anomalies (transactions > \u00a3100).",
+  "tags": [
+    "financial analysis",
+    "anomaly detection",
+    "account statement"
+  ],
+  "summary": "Financial analysis report generated from account statement data.",
+  "links": [],
+  "timestamp": 1744456683.3290815
+}

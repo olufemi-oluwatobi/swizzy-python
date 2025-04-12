@@ -20,7 +20,7 @@ from app.services.gemini_service import GeminiService  # Add this import
 
 # --- Sklearn Imports (for restricted env) ---
 try:
-    from sklearn import preprocessing, cluster, linear_model, metrics, model_selection
+    from scikit_learn import preprocessing, cluster, linear_model, metrics, model_selection
     _sklearn_available = True
 except ImportError:
     _sklearn_available = False
