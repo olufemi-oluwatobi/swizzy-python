@@ -4,6 +4,11 @@ import io
 import json
 from typing import Dict, List, Any, Tuple, Optional
 import pandas as pd
+import re
+import json
+import textwrap
+import traceback
+from typing import Dict, Any
 import openpyxl
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter, column_index_from_string
@@ -359,120 +364,159 @@ def modify_spreadsheet(file_handle: str, modifications: str) -> str:
 
 @function_tool
 def magic_enhance_excel(file_handle: str, instructions: str = "") -> Dict[str, Any]:
-    """Uses AI to analyze and enhance Excel file structure, formatting, and data quality"""
-    try:
-        # Setup base script template without extra indentation
-        script_template = """try:
-    # Read the input Excel file
-    sheets_data = read_excel_all(input_data['input_handle'])
-    enhanced_sheets = {{}}
-    changes_made = []
+    """
+    Uses AI to generate and execute Python code (using pandas) to modify Excel data based on instructions.
+    Focuses on data manipulation, not complex formatting. Replaces the original file.
 
-    # Process each sheet
-    for sheet_name, df in sheets_data.items():
-        # Make a copy of the dataframe for enhancement
-        enhanced_df = df.copy()
-        
-        # Apply enhancements based on analysis
-{enhancement_code}
-        
-        # Store enhanced sheet
-        enhanced_sheets[sheet_name] = enhanced_df
-        
-    # Save enhanced workbook
-    output_handle = write_excel_all(enhanced_sheets, f"enhanced_{{input_data['input_handle']}}")
+    Args:
+        file_handle: The handle of the Excel file to enhance.
+        instructions: Natural language instructions for data modification.
+
+    Returns:
+        Dictionary with 'success' status, 'enhanced_handle' (same as input handle),
+        'changes_made' list, 'sheets_processed' list, or 'error' message.
+    """
     
-    # Return results
+
+    logger.info(f"Starting magic enhancement for '{file_handle}' with instructions: '{instructions}'")
+
+    try:
+        # 1. Get file content context for the AI
+        logger.info("Reading sheet data for AI context...")
+        sheets_data_for_context = read_excel_all(file_handle)
+        if not sheets_data_for_context:
+            raise ValueError("Could not read any sheets from the provided Excel file handle for context.")
+
+        # 2. Prepare the prompt for the AI code generation
+        analysis_prompt = f"""
+You are an AI assistant that generates Python code snippets to modify pandas DataFrames based on user instructions.
+ONLY generate the Python code for the modifications. Do NOT include imports, file reading/writing, function definitions, or the surrounding script structure.
+
+Available variables:
+- `enhanced_df`: copy of the DataFrame to modify
+
+User Instructions:
+{instructions}
+
+Sheet names: {list(sheets_data_for_context.keys())}
+Sheet samples:
+{json.dumps({name: {'columns': list(df.columns), 'head': df.head(3).to_dict(orient='records')} for name, df in sheets_data_for_context.items()}, indent=2, default=str)}
+        """
+
+        # 3. Call the AI service
+        logger.info("Generating enhancement code via Gemini...")
+        gemini = GeminiService()
+        enhancement_result = gemini.analyze_text(analysis_prompt, "Generate DataFrame Enhancement Code")
+        if not enhancement_result.get("success") or not enhancement_result.get("text"):
+            error_msg = f"Failed to generate enhancement code from AI: {enhancement_result.get('error', 'No text returned')}"
+            logger.error(error_msg)
+            raise Exception(error_msg)
+
+        raw_code_response = enhancement_result["text"]
+        logger.debug(f"Raw AI code response:\n{raw_code_response}")
+
+        enhancement_code = ""
+        match_python = re.search(r"```python\n(.*?)```", raw_code_response, re.DOTALL | re.IGNORECASE)
+        match_generic = re.search(r"```\n(.*?)```", raw_code_response, re.DOTALL)
+
+        if match_python:
+            enhancement_code = match_python.group(1).strip()
+        elif match_generic:
+            enhancement_code = match_generic.group(1).strip()
+        else:
+            enhancement_code = raw_code_response.strip()
+            if not any(kw in enhancement_code for kw in ['pd.', 'df[', 'enhanced_df[', '=', 'if ', 'for ']):
+                enhancement_code = (
+                    "print('AI response did not contain a recognizable Python code block.')\n"
+                    "current_sheet_changes.append('Error: AI failed to generate valid enhancement code.')"
+                )
+
+        indented_enhancement_code = textwrap.indent(enhancement_code, ' ' * 12)
+
+        script_template = '''
+# Initialize variables
+output = {}
+all_changes_made = []
+enhanced_sheets = {}
+
+# Get input data
+input_handle = input_data['input_handle']
+instructions = input_data.get('instructions', '')
+sheets_data = read_excel_all(input_handle)
+
+if not sheets_data:
+    raise ValueError("No sheets were read from the input file.")
+
+# Create a copy of sheets_data for modifications
+dfs = {name: df.copy() for name, df in sheets_data.items()}
+
+try:
+    # Execute enhancement code
+{0}
+
+    # Update enhanced_sheets with modified DataFrames
+    enhanced_sheets = dfs
+
+    # Save results
+    output_handle = write_excel_all(enhanced_sheets, input_handle)
     output = {{
         'output_handle': output_handle,
-        'changes_made': changes_made,
-        'sheets_processed': list(sheets_data.keys())
+        'changes_made': all_changes_made,
+        'sheets_processed': list(enhanced_sheets.keys())
     }}
-
 except Exception as e:
-    output = {{'error': str(e)}}"""
+    error_msg = f"Error executing enhancement code: {{str(e)}}\\nTraceback: {{traceback.format_exc()}}"
+    print(error_msg)
+    all_changes_made.append(f"CRITICAL ERROR: {{str(e)}}")
+    output = {{'error': error_msg}}
+'''
 
-        print("Enhancing Excel file...")
+        # Format the script with enhancement code
+        final_script = script_template.format(indented_enhancement_code)
 
+        logger.debug(f"Final enhancement script:\n{final_script}")
 
-        # Get analysis results first
-        file_bytes = get_excel_bytes(file_handle)
-        sheets_data = read_excel_all(file_handle)
-        wb = load_workbook(io.BytesIO(file_bytes))
-        
-        # Build analysis prompt with actual data context
-        analysis_prompt = f"""
-        Generate Python code for Excel enhancement operations.
-        The code will be inserted into a template that already handles file loading and saving.
-        Focus on generating the enhancement operations only.
-
-        Instructions from user: {instructions}
-
-        Available data operations:
-        - DataFrame operations (using pandas)
-        - Numeric operations (using numpy)
-        - String operations
-        - Basic statistical operations
-        - Scikit-learn operations 
-
-        Sheet names available: {list(sheets_data.keys())}
-        Sample data structure: {json.dumps({name: df.head(3).to_dict() for name, df in sheets_data.items()})}
-
-        Generate enhancement code that:
-        1. Uses only pandas DataFrame operations
-        2. Tracks changes in the changes_made list
-        3. Handles errors gracefully
-        4. Returns enhanced DataFrames
-        5. Uses the provided script template for context
-        6. Manipulate sheet reformat texts, update columns.
-        7. Add new columns based on analysis
-        8. Add visualization charts
-        9. Add colors to text, aand formulas
-        10.UUs pyhon to perrom any traansformation a usr can do o an excel sheet
-        
-        Return ONLY the enhancement code, no imports or file operations.
-        """
-        
-        gemini = GeminiService()
-        enhancement_result = gemini.analyze_text(analysis_prompt, "Generate Enhancement Code")
-        if not enhancement_result.get("success"):
-            raise Exception(f"Failed to generate enhancement code: {enhancement_result.get('error')}")
-
-        # Extract and clean the code
-        enhancement_code = enhancement_result["text"]
-        if "```python" in enhancement_code:
-            enhancement_code = enhancement_code.split("```python")[1].split("```")[0]
-        enhancement_code = enhancement_code.strip()
-        
-        # Indent the enhancement code
-        enhancement_code = "\n".join("        " + line for line in enhancement_code.splitlines())
-        
-        # Create final script
-        final_script = script_template.format(enhancement_code=enhancement_code)
-        
-        # Execute the enhancement script
+        # 4. Execute the script
+        logger.info("Executing generated enhancement script...")
         script_executor = ScriptExecutionService()
+
+        print("Executing script with the following input:", final_script)
+        input_payload = {"input_handle": file_handle, "instructions": instructions}
+
         execution_result = script_executor.execute_script(
-            final_script,
-            {"input_handle": file_handle}
+            script=final_script,
+            input_data=input_payload,
         )
-        
+        print(f"Execution result: {execution_result}")
+
         if not execution_result.get("success"):
-            raise Exception(f"Enhancement execution failed: {execution_result.get('error')}")
-            
+            logger.error(f"Script execution failed. Error details: {execution_result.get('error')}")
+            return {"success": False, "error": f"Execution failed: {execution_result.get('error')}"}
+
+        script_output = execution_result.get("output", {})
+        print(f"Script execution output: {script_output}")
+        if not script_output:
+            return {
+                "success": True,
+                "enhanced_handle": file_handle,
+                "changes_made": ["Script executed, but no output received."],
+                "sheets_processed": []
+            }
+
         return {
             "success": True,
-            "enhanced_handle": execution_result["output"].get("output_handle"),
-            "changes_made": execution_result["output"].get("changes_made", [])
+            "enhanced_handle": script_output.get("output_handle", file_handle),
+            "changes_made": script_output.get("changes_made", []),
+            "sheets_processed": script_output.get("sheets_processed", [])
         }
 
+    except FileNotFoundError as e:
+        return {"success": False, "error": f"Input file not found: {file_handle}"}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
     except Exception as e:
-        print(f"Excel enhancement failed: {e}")
-        logger.exception(f"Excel enhancement failed: {e}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        logger.exception(f"Unexpected error during magic enhancement: {e}")
+        return {"success": False, "error": f"Unexpected error: {str(e)}"}
 
 def _extract_json_from_response(response_text: str) -> dict:
     """Helper function to extract and parse JSON from Gemini response"""

@@ -274,14 +274,26 @@ class ScriptExecutionService:
             # Execute the script
             exec(script, globals(), local_namespace)
             
+            # Get the output from local namespace
+            output = local_namespace.get('output', {})
+            
+            # Check if output contains error
+            if isinstance(output, dict) and 'error' in output:
+                logger.error(f"Script execution produced error: {output['error']}")
+                return {
+                    'success': False,
+                    'error': output['error']
+                }
+            
             return {
                 'success': True,
-                'output': local_namespace.get('output', {})
+                'output': output
             }
             
         except Exception as e:
-            logger.exception(f"Script execution failed: {e}")
+            error_msg = f"Script execution failed: {str(e)}\nTraceback: {traceback.format_exc()}"
+            logger.exception(error_msg)
             return {
                 'success': False,
-                'error': str(e)
+                'error': error_msg
             }
