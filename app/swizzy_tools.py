@@ -16,6 +16,7 @@ import traceback # <-- For formatting exceptions
 import numpy as np # <-- Import numpy for restricted env
 import time # For unique filenames
 import uuid # For unique filenames
+from app.services.gemini_service import GeminiService  # Add this import
 
 # --- Sklearn Imports (for restricted env) ---
 try:
@@ -265,3 +266,98 @@ def extract_text_from_image(file_handle: str) -> str:
     except Exception as e:
         logger.exception(f"Error during text extraction from image '{file_handle}': {e}")
         return f"Error processing image '{file_handle}': {e}"
+
+def _clean_csv_block(block: str) -> str:
+    """Helper to clean and validate a CSV block."""
+    lines = []
+    for line in block.splitlines():
+        line = line.strip()
+        if line.startswith('```') or not line:
+            continue
+        # Only process lines that are actual CSV content
+        if ',' in line:
+            lines.append(line)
+    return '\n'.join(lines)
+
+@function_tool
+def extract_spreadsheet_from_document(file_handle: str, extraction_instruction: str = "", output_format: str = "csv") -> str:
+    """
+    Extracts spreadsheet data from documents using AI. Handles PDFs, images, and text files.
+    Automatically converts to Excel for multiple tables.
+    """
+    logger.info(f"Extracting spreadsheet data from: {file_handle}")
+    
+    try:
+        file_bytes = storage_service.download_file(file_handle)
+        file_extension = os.path.splitext(file_handle)[1].lower()
+        gemini_service = GeminiService()
+        extracted_data = []
+
+        # Base prompt for all file types
+        base_prompt = f"""Extract all tables from this document and return them as CSV data.
+        Format requirements:
+        - Use ```csv blocks for each table
+        - Include headers
+        - Maintain data relationships
+        - Clean formatting
+        Specific instructions: {extraction_instruction}
+        """
+
+        # Get AI response based on file type
+        if file_extension == '.pdf':
+            result = gemini_service.analyze_pdf(file_bytes, base_prompt)
+        elif file_extension in ['.jpg', '.jpeg', '.png']:
+            result = gemini_service.analyze_image(file_bytes, base_prompt)
+        else:  # Text or markdown
+            text_content = file_bytes.decode('utf-8', errors='replace')
+            result = gemini_service.analyze_text(text_content, base_prompt)
+
+        if not result.get("success"):
+            return f"Error: AI extraction failed: {result.get('error', 'Unknown error')}"
+
+        # Extract CSV blocks from AI response
+        blocks = result["text"].split('```csv')
+        for block in blocks[1:]:  # Skip first empty split
+            if block.strip():
+                end_marker = block.find('```')
+                if end_marker > -1:
+                    csv_content = block[:end_marker].strip()
+                    if csv_content:
+                        extracted_data.append(csv_content)
+
+        if not extracted_data:
+            return "Error: No valid tables found in document"
+
+        # Auto-select output format based on number of tables
+        if len(extracted_data) > 1:
+            output_format = "xlsx"
+            logger.info(f"Multiple tables detected ({len(extracted_data)}), using Excel format")
+        
+        timestamp = int(time.time())
+        base_name = os.path.splitext(os.path.basename(file_handle))[0]
+        output_filename = f"{base_name}_extracted_{timestamp}.{output_format}"
+
+        if output_format == "csv":
+            file_bytes = extracted_data[0].encode('utf-8')  # Just use first table
+            file_handle = storage_service.upload_file(output_filename, file_bytes)
+            return f"Extracted single table to CSV. Handle: {file_handle}"
+        
+        else:  # xlsx for multiple tables
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                for i, csv_block in enumerate(extracted_data, 1):
+                    try:
+                        df = pd.read_csv(io.StringIO(csv_block))
+                        sheet_name = f'Table_{i}'
+                        df.to_excel(writer, sheet_name=sheet_name, index=False)
+                        writer.sheets[sheet_name].sheet_state = 'visible'
+                    except Exception as e:
+                        logger.warning(f"Error processing table {i}: {e}")
+                        continue
+
+            file_handle = storage_service.upload_file(output_filename, buffer.getvalue())
+            return f"Extracted {len(extracted_data)} tables to Excel. Handle: {file_handle}"
+
+    except Exception as e:
+        logger.exception(f"Error extracting spreadsheet data: {e}")
+        return f"Error processing document: {str(e)}"

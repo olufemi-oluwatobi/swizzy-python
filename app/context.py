@@ -27,9 +27,10 @@ async def inspect_context(wrapper: RunContextWrapper[TaskContext]) -> str:
     return str(wrapper.context)
 
 @function_tool
-async def log_action(wrapper: RunContextWrapper[TaskContext], action_description: str) -> str:
+async def log_action(wrapper: RunContextWrapper[TaskContext], action_description: str, agent_name: str) -> str:
     """Logs a description of an action performed by the agent into the task context."""
-    print(f"[Task {wrapper.context.task_id}] Logging action: {action_description}")
+    # Log the action with the agent name and task ID
+    print(f"[Task {wrapper.context.task_id}] Agent: {agent_name}, Logging action: {action_description}")
     wrapper.context.action_log.append(action_description)
     logger.info(f"[Task {wrapper.context.task_id}] Logged action: {action_description}")
     return f"Action logged: {action_description}"

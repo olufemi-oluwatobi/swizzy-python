@@ -18,6 +18,7 @@ from app.swizzy_tools import (
     extract_text_from_image,
     ponder_document_request,
     read_file_content,
+    extract_spreadsheet_from_document,  # Add new tool
 )
 from app.tools import (
     analyze_spreadsheet,
@@ -106,6 +107,7 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         "- create_spreadsheet: Use this to create new spreadsheets (filename MUST be `[task_id]_your_filename.xlsx`).",
         "- modify_spreadsheet: Use this to modify existing spreadsheets ",
         "- analyze_spreadsheet: Use this to perform complex analysis operations on spreadsheets ",
+        "- extract_spreadsheet_from_document: Use this to extract spreadsheet data from documents (e.g., PDF), We can read documets and caputree thee table in them ideeal for invoices, bank statments and any job for extracting tables from documents",
         "- inspect_context: Use this to inspect the current context and understand the task better.  If a file is not found there is a likelihood tit was not provided to you check the context for provided files",
         "**CRITICAL RULES**: ",
         "1. NEVER skip the pondering step - ALWAYS call ponder_spreadsheet_request first ",
@@ -159,5 +161,6 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         create_spreadsheet,
         modify_spreadsheet,
         analyze_spreadsheet,
+        extract_spreadsheet_from_document,  # Add to tools list
     ]
 )

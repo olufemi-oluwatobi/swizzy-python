@@ -18,6 +18,7 @@ from app.swizzy_tools import (
     extract_text_from_image,
     ponder_document_request,
     read_file_content,
+    extract_spreadsheet_from_document
 )
 from app.tools import (
     analyze_spreadsheet,
@@ -121,6 +122,7 @@ document_agent = Agent[TaskContext]( # <--- Added TaskContext type hint
         "       - To **edit** `.docx` or `.pdf` files, you **MUST first convert them to Markdown** using `convert_to_markdown`. Perform edits on the Markdown version using `edit_markdown_section`. Only convert back to the original format (`.docx`, `.pdf`) using `convert_file_format` if specifically requested by the user. (Reading them first does *not* require conversion).", 
         "   - **Creating:**",
         "       - When creating new documents for users, **always prefer creating them in Markdown format** (`.md`) using `create_markdown` for maximum future editability. Ensure the filename follows the `[task_id]_your_filename.md` pattern.",
+
         "**CRITICAL: ALWAYS PONDER FIRST!**",
         "Before taking ANY action, you MUST:",
         "1. Use the ponder_task tool to analyze the request"

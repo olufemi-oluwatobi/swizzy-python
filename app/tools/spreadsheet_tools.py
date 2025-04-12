@@ -8,7 +8,7 @@ import openpyxl
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter, column_index_from_string
 from openpyxl.styles import Font, PatternFill, Alignment
-from app.services import storage_service
+from app.services.storage_service import storage_service
 from agents import function_tool
 
 logger = logging.getLogger(__name__)

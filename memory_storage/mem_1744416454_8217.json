@@ -1,0 +1,14 @@
+{
+  "title": "PDF to Excel Conversion Failure",
+  "content": "The spreadsheet specialist failed to convert the PDF data to an Excel file. The extracted CSV had formatting issues and there were backend service errors preventing excel file creation. The extracted CSV file has been returned for manual processing. Filename: account-statement_2025-02-01_2025-04-02_en-gb_e43bb2_extracted_1744416445.csv",
+  "tags": [
+    "pdf",
+    "excel",
+    "csv",
+    "spreadsheet_specialist",
+    "failure"
+  ],
+  "summary": "Spreadsheet specialist failed to convert PDF to Excel, returning CSV",
+  "links": [],
+  "timestamp": 1744416454.1667743
+}
