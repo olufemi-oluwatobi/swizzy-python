@@ -1,0 +1,13 @@
+{
+  "title": "General Excel Cleaning Suggestions",
+  "content": "Here are some general suggestions for cleaning and enhancing an Excel file:\n\n**Column Cleaning:**\n*   **Remove unnecessary columns:** Delete any columns that don't provide valuable information.\n*   **Standardize data formats:** Ensure that data in each column is consistent (e.g., all dates in the same format, all phone numbers with the same formatting).\n*   **Correct inconsistencies:** Fix any typos, errors, or inconsistencies in the data.\n*   **Split combined columns:** If a column contains multiple pieces of information (e.g., first and last name), split it into separate columns.\n*   **Rename columns:** Use clear and descriptive column names.\n\n**Adding Formulas:**\n*   **Calculated columns:** Add new columns that calculate values based on existing data (e.g., total price, profit margin).\n*   **Summary statistics:** Use formulas to calculate summary statistics such as sums, averages, minimums, and maximums.\n*   **Conditional formatting:** Use formulas to highlight cells that meet certain criteria.\n\n**Row Cleaning:**\n*   **Remove duplicate rows:** Delete any rows that are identical to other rows.\n*   **Remove blank rows:** Delete any rows that are completely empty.\n*   **Filter and sort data:** Use filtering and sorting to identify and correct errors or inconsistencies.\n*   **Handle missing values:** Decide how to handle missing values (e.g., fill them in with a default value, remove the rows).\n\n**Specific Formula Suggestions (depending on the data):**\n*   `=SUM(A1:A10)`:  Sums the values in cells A1 through A10.\n*   `=AVERAGE(A1:A10)`: Calculates the average of the values in cells A1 through A10.\n*   `=IF(B1>100, \"High\", \"Low\")`:  Checks if the value in cell B1 is greater than 100. If it is, it returns \"High\"; otherwise, it returns \"Low\".\n*   `=VLOOKUP(A1, Sheet2!A:B, 2, FALSE)`:  Looks up the value in cell A1 in the first column of Sheet2 and returns the corresponding value from the second column.\n\nTo provide more specific advice, I would need to see the column headers and a sample of the data.",
+  "tags": [
+    "excel",
+    "cleaning",
+    "formulas",
+    "general_suggestions"
+  ],
+  "summary": "General suggestions for cleaning and enhancing an Excel file.",
+  "links": [],
+  "timestamp": 1744490675.072458
+}

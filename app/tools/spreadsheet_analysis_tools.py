@@ -92,7 +92,7 @@ def analyze_spreadsheet(file_handle: str, analysis_config: str) -> str:
                 return json.dumps({"error": "No analysis operations specified"})
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON in analysis configuration: {e}")
-            return json.dumps({"error": f"Invalid format for analysis configuration: {e}"})
+            return json.dumps({"error": f"Invalid format for analysis configuration try again with a valid json string: {e}"})
         
         # Load the workbook
         try:

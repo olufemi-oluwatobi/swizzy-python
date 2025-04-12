@@ -11,6 +11,8 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from app.services.storage_service import storage_service
 from agents import function_tool
 from app.services.gemini_service import GeminiService
+from app.services.script_execution_service import ScriptExecutionService
+from app.tools.spreadsheet_utils import read_excel_all, get_excel_bytes
 
 logger = logging.getLogger(__name__)
 
@@ -357,132 +359,176 @@ def modify_spreadsheet(file_handle: str, modifications: str) -> str:
 
 @function_tool
 def magic_enhance_excel(file_handle: str, instructions: str = "") -> Dict[str, Any]:
-    """Uses AI to analyze and enhance Excel file structure, formatting, and data quality."""
+    """Uses AI to analyze and enhance Excel file structure, formatting, and data quality"""
     try:
-        # Load workbook and extract metadata
-        file_bytes = storage_service.download_file(file_handle)
+        # Setup base script template without extra indentation
+        script_template = """try:
+    # Read the input Excel file
+    sheets_data = read_excel_all(input_data['input_handle'])
+    enhanced_sheets = {{}}
+    changes_made = []
+
+    # Process each sheet
+    for sheet_name, df in sheets_data.items():
+        # Make a copy of the dataframe for enhancement
+        enhanced_df = df.copy()
+        
+        # Apply enhancements based on analysis
+{enhancement_code}
+        
+        # Store enhanced sheet
+        enhanced_sheets[sheet_name] = enhanced_df
+        
+    # Save enhanced workbook
+    output_handle = write_excel_all(enhanced_sheets, f"enhanced_{{input_data['input_handle']}}")
+    
+    # Return results
+    output = {{
+        'output_handle': output_handle,
+        'changes_made': changes_made,
+        'sheets_processed': list(sheets_data.keys())
+    }}
+
+except Exception as e:
+    output = {{'error': str(e)}}"""
+
+        print("Enhancing Excel file...")
+
+
+        # Get analysis results first
+        file_bytes = get_excel_bytes(file_handle)
+        sheets_data = read_excel_all(file_handle)
         wb = load_workbook(io.BytesIO(file_bytes))
         
-        # Collect sheet metadata and sample data
-        sheets_meta = {}
-        for sheet_name in wb.sheetnames:
-            ws = wb[sheet_name]
-            sheet_meta = {
-                "headers": [],
-                "formulas": [],
-                "sample_data": [],
-                "column_types": {},
-                "dimensions": f"{ws.dimensions}"
-            }
-            
-            # Extract headers and formulas
-            for cell in ws[1]:
-                if cell.value:
-                    sheet_meta["headers"].append(str(cell.value))
-            
-            # Find formulas
-            for row in ws.iter_rows():
-                for cell in row:
-                    if cell.value and isinstance(cell.value, str) and cell.value.startswith('='):
-                        sheet_meta["formulas"].append({
-                            "cell": cell.coordinate,
-                            "formula": cell.value
-                        })
-            
-            # Get sample data and infer types
-            df = pd.DataFrame(ws.values)
-            if not df.empty:
-                df.columns = df.iloc[0]
-                df = df[1:]
-                sheet_meta["sample_data"] = df.head(5).to_dict('records')
-                sheet_meta["column_types"] = df.dtypes.astype(str).to_dict()
-            
-            sheets_meta[sheet_name] = sheet_meta
+        # Build analysis prompt with actual data context
+        analysis_prompt = f"""
+        Generate Python code for Excel enhancement operations.
+        The code will be inserted into a template that already handles file loading and saving.
+        Focus on generating the enhancement operations only.
 
-        # Update analysis prompt
-        analysis_prompt = f"""Analyze this Excel workbook and provide enhancement recommendations:
+        Instructions from user: {instructions}
 
-                            Workbook Structure:
-                            {json.dumps(sheets_meta, indent=2)}
+        Available data operations:
+        - DataFrame operations (using pandas)
+        - Numeric operations (using numpy)
+        - String operations
+        - Basic statistical operations
+        - Scikit-learn operations 
 
-                            Custom Instructions: {instructions}
+        Sheet names available: {list(sheets_data.keys())}
+        Sample data structure: {json.dumps({name: df.head(3).to_dict() for name, df in sheets_data.items()})}
 
-                            Focus Areas:
-                            1. Data Quality & Standardization
-                            2. Column Type Optimization
-                            3. Formula Efficiency
-                            4. Structural Improvements
-                            5. Formatting Consistency
-
-                            Provide analysis in this JSON format:
-                            {{
-                                "analysis": {{
-                                    "issues": [],
-                                    "recommendations": []
-                                }},
-                                "script_instructions": "Detailed instructions in plain text for what the enhancement script should do",
-                                "technical_notes": {{
-                                    "libraries_needed": [],
-                                    "data_transformations": []
-                                }}
-                            }}
-                            """
-
-        # Get AI analysis
-        gemini = GeminiService()
-        result = gemini.analyze_text(analysis_prompt, "Excel Enhancement Analysis")
-        if not result.get("success"):
-            raise Exception(f"AI analysis failed: {result.get('error')}")
-
-        try:
-            analysis = json.loads(result["text"])
-        except json.JSONDecodeError:
-            raise Exception("Failed to parse AI analysis output")
-
-        # Generate and execute enhancement script based on analysis
-        script_prompt = f"""Generate Python code to enhance this Excel file based on this analysis:
-                {json.dumps(analysis, indent=2)}
-
-                Use these operations:
-                - read_excel_all() for reading sheets
-                - write_excel_all() for saving sheets
-                - Pandas for data cleaning
-                - openpyxl for formatting
-
-                Return ONLY Python code that:
-                1. Implements all recommended changes
-                2. Uses safe operations
-                3. Returns enhanced workbook handle
-                """
-
-        script_result = gemini.analyze_text(script_prompt, "Generate Enhancement Script")
-        if not script_result.get("success"):
-            raise Exception(f"Script generation failed: {script_result.get('error')}")
-
-        # Clean and execute the enhancement script
-        from app.services.script_execution_service import ScriptExecutionService
-        script_executor = ScriptExecutionService()
+        Generate enhancement code that:
+        1. Uses only pandas DataFrame operations
+        2. Tracks changes in the changes_made list
+        3. Handles errors gracefully
+        4. Returns enhanced DataFrames
+        5. Uses the provided script template for context
+        6. Manipulate sheet reformat texts, update columns.
+        7. Add new columns based on analysis
+        8. Add visualization charts
+        9. Add colors to text, aand formulas
+        10.UUs pyhon to perrom any traansformation a usr can do o an excel sheet
         
+        Return ONLY the enhancement code, no imports or file operations.
+        """
+        
+        gemini = GeminiService()
+        enhancement_result = gemini.analyze_text(analysis_prompt, "Generate Enhancement Code")
+        if not enhancement_result.get("success"):
+            raise Exception(f"Failed to generate enhancement code: {enhancement_result.get('error')}")
+
+        # Extract and clean the code
+        enhancement_code = enhancement_result["text"]
+        if "```python" in enhancement_code:
+            enhancement_code = enhancement_code.split("```python")[1].split("```")[0]
+        enhancement_code = enhancement_code.strip()
+        
+        # Indent the enhancement code
+        enhancement_code = "\n".join("        " + line for line in enhancement_code.splitlines())
+        
+        # Create final script
+        final_script = script_template.format(enhancement_code=enhancement_code)
+        
+        # Execute the enhancement script
+        script_executor = ScriptExecutionService()
         execution_result = script_executor.execute_script(
-            script_result["text"],
+            final_script,
             {"input_handle": file_handle}
         )
-
+        
         if not execution_result.get("success"):
             raise Exception(f"Enhancement execution failed: {execution_result.get('error')}")
-
+            
         return {
             "success": True,
-            "analysis": analysis,
             "enhanced_handle": execution_result["output"].get("output_handle"),
             "changes_made": execution_result["output"].get("changes_made", [])
         }
 
     except Exception as e:
+        print(f"Excel enhancement failed: {e}")
         logger.exception(f"Excel enhancement failed: {e}")
         return {
             "success": False,
             "error": str(e)
+        }
+
+def _extract_json_from_response(response_text: str) -> dict:
+    """Helper function to extract and parse JSON from Gemini response"""
+    try:
+        # Clean up the response text
+        text = response_text.strip()
+        
+        # Remove markdown headers
+        text = '\n'.join(line for line in text.split('\n') 
+                        if not line.strip().startswith('#'))
+        
+        # Case 1: Response is already valid JSON
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+            
+        # Case 2: Find JSON content between code blocks
+        if "```" in text:
+            # Split by code blocks and try each block
+            blocks = text.split("```")
+            for block in blocks:
+                # Remove language identifier if present
+                if "\n" in block:
+                    block = block.split("\n", 1)[1]
+                block = block.strip()
+                if not block:
+                    continue
+                try:
+                    return json.loads(block)
+                except json.JSONDecodeError:
+                    continue
+        
+        # Case 3: Try to find JSON-like content
+        import re
+        json_pattern = r'\{[\s\S]*\}'
+        matches = re.findall(json_pattern, text)
+        for match in matches:
+            try:
+                return json.loads(match)
+            except json.JSONDecodeError:
+                continue
+            
+        raise ValueError("No valid JSON content found in response")
+            
+    except Exception as e:
+        logger.error(f"Failed to parse JSON response: {text}")
+        logger.error(f"Parse error: {str(e)}")
+        # Return a basic valid JSON structure
+        return {
+            "findings": ["Error parsing analysis results"],
+            "data_quality_issues": [],
+            "potential_insights": [],
+            "recommended_deep_dives": [],
+            "suggested_visualizations": [],
+            "next_analysis_steps": []
         }
 
 @function_tool
@@ -557,8 +603,14 @@ def smart_spreadsheet_analysis(file_handle: str, depth: str = "standard") -> Dic
         initial_result = gemini.analyze_text(initial_prompt, "Initial Analysis")
         if not initial_result.get("success"):
             raise Exception("Initial analysis failed")
+
+        print(f"Initial analysis result: {initial_result['text']}")
             
-        initial_analysis = json.loads(initial_result["text"])
+        try:
+            initial_analysis = _extract_json_from_response(initial_result["text"])
+        except ValueError as e:
+            logger.error(f"Failed to parse initial analysis JSON: {str(e)}")
+            raise Exception(f"Failed to parse initial analysis JSON: {str(e)}")
         results["analysis_rounds"].append({"type": "initial", "findings": initial_analysis})
         
         # Feedback Loop - Deep Dive Analysis
@@ -577,15 +629,52 @@ def smart_spreadsheet_analysis(file_handle: str, depth: str = "standard") -> Dic
             2. Pattern identification
             3. Actionable insights
             4. Specific recommendations
+            
+            Return analysis in this JSON format:
+            {{
+                "deep_dive_focus": "{deep_dive}",
+                "findings": [],
+                "statistical_analysis": {{
+                    "key_metrics": [],
+                    "patterns": [],
+                    "outliers": []
+                }},
+                "recommendations": [],
+                "next_steps": []
+            }}
             """
             
             dive_result = gemini.analyze_text(dive_prompt, f"Deep Dive: {deep_dive}")
             if dive_result.get("success"):
-                results["analysis_rounds"].append({
-                    "type": "deep_dive",
-                    "focus": deep_dive,
-                    "findings": json.loads(dive_result["text"])
-                })
+                try:
+                    raw_text = dive_result["text"].strip()
+                    # Remove any markdown headers
+                    if raw_text.startswith('#'):
+                        raw_text = '\n'.join(line for line in raw_text.split('\n') 
+                                           if not line.strip().startswith('#'))
+                    
+                    findings = _extract_json_from_response(raw_text)
+                    if not isinstance(findings, dict):
+                        findings = {
+                            "deep_dive_focus": deep_dive,
+                            "findings": ["Error: Analysis returned invalid format"],
+                            "statistical_analysis": {
+                                "key_metrics": [],
+                                "patterns": [],
+                                "outliers": []
+                            },
+                            "recommendations": [],
+                            "next_steps": []
+                        }
+                    
+                    results["analysis_rounds"].append({
+                        "type": "deep_dive",
+                        "focus": deep_dive,
+                        "findings": findings
+                    })
+                except Exception as e:
+                    logger.warning(f"Failed to parse deep dive analysis for {deep_dive}: {str(e)}")
+                    continue
         
         # Generate Comprehensive Report
         report_prompt = f"""
@@ -603,8 +692,12 @@ def smart_spreadsheet_analysis(file_handle: str, depth: str = "standard") -> Dic
         
         Use professional markdown formatting with:
         - Clear section hierarchy
+        - Linked table of content
+        - Focus on insights and not banal summaries.
+        - Visualizations (charts, graphs) where applicable
+        - Use the full markdown syntax for tables, lists, and code blocks
+        - Use headings and subheadings for organization
         - Tables for structured data
-        - Bullet points for findings
         - Code blocks for technical details
         """
         
@@ -615,7 +708,7 @@ def smart_spreadsheet_analysis(file_handle: str, depth: str = "standard") -> Dic
         # Save report
         report_handle = storage_service.upload_file(
             f"smart_analysis_{file_handle.split('/')[-1]}.md",
-            report_result["text"].encode('utf-8')
+            report_result.get("text", "").encode('utf-8')
         )
         
         results.update({

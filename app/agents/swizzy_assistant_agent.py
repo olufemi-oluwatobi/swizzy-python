@@ -138,6 +138,7 @@ swizzy_assistant_agent = Agent[TaskContext](
         "5. Only then execute the plan (e.g., delegate to specialist agents if needed, log the delegation).",
         "**ORCHESTRATION WORKFLOW**: ", # Renamed and slightly adjusted
         "1. Receive the user's request.",
+        "2. Log all attached files recieved using `log_file_action`  this is a very vital step",
         "2. **MANDATORY**: Use `ponder_task` to analyze, plan, and determine the execution strategy (log action).",
         "3. Execute the plan: This might involve using memory tools, directly calling a specialist agent tool, or a sequence of actions (log actions).",
         "4. Evaluate the results from tools/agents. Does it solve the problem?",

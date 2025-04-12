@@ -9,7 +9,9 @@ from PIL import Image
 from io import BytesIO
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
-from ..tools.spreadsheet_tools import create_spreadsheet, modify_spreadsheet
+# Remove circular import
+# from ..tools.spreadsheet_tools import create_spreadsheet, modify_spreadsheet
+from app.tools.spreadsheet_utils import read_excel_all, write_excel_file, get_excel_bytes
 import base64
 import docx
 from openpyxl import Workbook, load_workbook
@@ -25,6 +27,10 @@ from openpyxl.drawing.image import Image as XLImage
 import PyPDF2
 from docx.shared import Pt, RGBColor, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+import logging
+from app.tools.spreadsheet_utils import read_excel_all, write_excel_file
+
+logger = logging.getLogger(__name__)
 
 # Unsafe imports/operations to check for
 UNSAFE_PATTERNS = [
@@ -55,7 +61,7 @@ class ScriptExecutionService:
             'decode_base64': self._safe_decode_base64
         }
         
-        # Define allowed modules (comprehensive set)
+        # Base modules that are always available
         self.allowed_modules = {
             # Data processing
             'pd': pd,
@@ -67,25 +73,13 @@ class ScriptExecutionService:
             'BytesIO': BytesIO,
             'base64': base64,
             
-            # Machine Learning
-            'preprocessing': preprocessing,
-            'metrics': metrics,
-            'model_selection': model_selection,
-            'cluster': cluster,
-            'decomposition': decomposition,
-            'ensemble': ensemble,
-            'linear_model': linear_model,
-            'neighbors': neighbors,
-            'svm': svm,
-            'tree': tree,
-            
             # Excel Processing
             'Workbook': Workbook,
             'load_workbook': load_workbook,
             'get_column_letter': get_column_letter,
             'column_index_from_string': column_index_from_string,
             'Font': Font,
-            'PatternFill': PatternFill,
+            'PatternFill': PatternFill, 
             'Alignment': Alignment,
             'Border': Border,
             'Side': Side,
@@ -211,9 +205,10 @@ class ScriptExecutionService:
                 Available Modules:
                 - pandas (pd)
                 - numpy (np)
-                - sklearn (preprocessing, metrics, model_selection, cluster, etc.)
                 - PIL.Image
                 - json
+                - openpyxl
+                - docx
 
                 {json.dumps(input_schema)}
                 {json.dumps(output_requirements)}
@@ -248,31 +243,45 @@ class ScriptExecutionService:
         return '\n'.join(safe_lines)
 
     def execute_script(self, script: str, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute script in restricted environment"""
+        """Execute a Python script with the provided input data"""
         try:
-            # Sanitize script first
-            clean_script = self._sanitize_script(script)
+            # Remove any leading/trailing whitespace
+            script = script.strip()
             
-            # Setup restricted globals
-            globals_dict = {
-                **self.allowed_modules,
-                **self.safe_ops,
-                'input_data': input_data
+            # Remove common leading whitespace from every line
+            lines = script.splitlines()
+            if lines:
+                # Find minimum indentation
+                def get_indent(line):
+                    return len(line) - len(line.lstrip()) if line.strip() else float('inf')
+                min_indent = min(get_indent(line) for line in lines if line.strip())
+                # Remove that amount of indentation from each line
+                script = '\n'.join(
+                    line[min_indent:] if line.strip() else ''
+                    for line in lines
+                )
+
+            # Create a local namespace for script execution
+            local_namespace = {
+                'input_data': input_data,
+                'read_excel_all': read_excel_all,
+                'write_excel_all': write_excel_file,
+                'get_excel_bytes': get_excel_bytes,
+                'pd': pd,
+                'np': np
             }
             
-            # Execute with restricted globals
-            local_vars = {}
-            exec(clean_script, globals_dict, local_vars)
+            # Execute the script
+            exec(script, globals(), local_namespace)
             
             return {
                 'success': True,
-                'output': local_vars.get('output', {}),
-                'message': 'Script executed successfully'
+                'output': local_namespace.get('output', {})
             }
             
         except Exception as e:
+            logger.exception(f"Script execution failed: {e}")
             return {
                 'success': False,
-                'error': str(e),
-                'traceback': traceback.format_exc()
+                'error': str(e)
             }

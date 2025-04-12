@@ -289,3 +289,41 @@ class GeminiService:
              result["structured_data"] = None
 
         return result
+
+    def analyze_text(self, text: str, analysis_type: str = "General Analysis") -> Dict[str, Any]:
+        """
+        Analyze text content using Gemini's text model.
+
+        Args:
+            text: The text content to analyze
+            analysis_type: Type of analysis to perform (used in logging)
+
+        Returns:
+            Dictionary containing the analysis results
+        """
+        logger.info(f"Sending {analysis_type} request to Gemini.")
+        
+        if not self.api_key:
+            return {"success": False, "error": "GOOGLE_API_KEY not set"}
+
+        try:
+            # Prepare the payload for text analysis
+            payload = {
+                "contents": [{
+                    "parts": [{"text": text}]
+                }],
+                "generationConfig": {
+                    "temperature": 0.3,  # Lower temperature for more focused analysis
+                    "maxOutputTokens": 8192,  # Allow for detailed analysis
+                    "topP": 0.8,
+                    "topK": 40
+                }
+            }
+
+            # Use the multimodal model for text analysis
+            result = self._make_request(self.multimodal_model, payload)
+            return self._parse_gemini_response(result)
+
+        except Exception as e:
+            logger.exception(f"Error during text analysis: {e}")
+            return {"success": False, "error": f"Failed to analyze text: {str(e)}"}

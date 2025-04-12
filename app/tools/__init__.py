@@ -1,7 +1,6 @@
 # Import all tools to make them available when importing from the tools package
 from .spreadsheet_analysis_tools import analyze_spreadsheet
-from .spreadsheet_tools import create_spreadsheet, modify_spreadsheet, ponder_spreadsheet_request
-from .run_spreadsheet_operation import run_spreadsheet_operation
+from .spreadsheet_tools import create_spreadsheet, modify_spreadsheet, ponder_spreadsheet_request, smart_spreadsheet_analysis, magic_enhance_excel
 
 # Memory tools
 from .memory_tools import (
