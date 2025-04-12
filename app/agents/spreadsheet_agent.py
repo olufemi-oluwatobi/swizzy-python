@@ -23,7 +23,6 @@ from app.swizzy_tools import (
 from app.tools import (
     analyze_spreadsheet,
     create_spreadsheet,
-    modify_spreadsheet,
     ponder_spreadsheet_request,
 )
 from app.tools.content_tools import (
@@ -67,6 +66,7 @@ from app.tools.core_tools import ponder_task
 from app.config import STYLE_INSTRUCTIONS
 from app.agents.model_config import gemini_model  # Import shared model config
 from app.agents.spreadsheet_analysis_agent import spreadsheet_analysis_agent
+from app.tools.run_spreadsheet_operation import run_spreadsheet_operation
 
 logger = logging.getLogger(__name__)
 
@@ -108,9 +108,9 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         "- ponder_spreadsheet_request: MUST be called FIRST to think through the request ",
         "- read_file_content: Use this to read existing spreadsheet files excel files, csv files etc.",
         "- create_spreadsheet: Use this to create new spreadsheets (filename MUST be `[task_id]_your_filename.xlsx`).",
-        "- modify_spreadsheet: Use this to modify existing spreadsheets ",
         "- analyze_spreadsheet: Use this to perform complex analysis operations on spreadsheets ",
         "- extract_spreadsheet_from_document: Use this to extract spreadsheet data from documents (e.g., PDF), We can read documets and caputree thee table in them ideeal for invoices, bank statments and any job for extracting tables from documents",
+        "- run_spreadsheet_operation: Executes a custom operation on a spreadsheet based on the given instruction. Use this tool to modify or take actions on spreadsheet. Ensure you provide very clear and detailed instruction.",
         "- inspect_context: Use this to inspect the current context and understand the task better.  If a file is not found there is a likelihood that the accurate file handle was not provided to you check the context for provided files",
         "**CRITICAL RULES**: ",
         "1. NEVER skip the pondering step - ALWAYS call ponder_spreadsheet_request first ",
@@ -126,6 +126,7 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         "11. If you weren't provided a file, flag this in your response ",
         "13. Always loog the handle of whatever file you create or modify so you can return it to the user",
         "12. You are a master with spreadsheets ie csv excel, data analytics etc, you must operate with a sense of excellence and agency. Fully utilize the tools at your disposal",
+         "When using `run_spreadsheet_operation`, provide detailed and specific instructions. For example, instead of saying 'update the spreadsheet', specify 'update cell B5 with the value 42'. Be precise about the desired changes.",
         # ...(rest of instructions remain the same)...
          "**EXAMPLES OF PROPER TOOL USAGE**: ",
         "- To ponder: `ponder_spreadsheet_request(request_description='Create a budget spreadsheet', points_to_consider='Need to determine columns, format, and initial data')` ",
@@ -133,7 +134,7 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         "- To get task ID (example assumes ID is 'abc-123'): `get_task_id()` -> returns 'abc-123'",
         "- To read a file: `read_file_content(file_handle='sales_data.xlsx')` ",
         "- To create a formatted spreadsheet (after getting task_id='abc-123'): `create_spreadsheet(filename='abc-123_budget.xlsx', spreadsheet_data='{...json data...}')` ",
-        "- To modify a spreadsheet: `modify_spreadsheet(file_handle='inventory.xlsx', operations='[{\"operation\": \"update_cell\", \"cell\": \"B5\", \"value\": \"42\"}]')` ",
+        "- To modify a spreadsheet using run_spreadsheet_operation (after getting task_id='abc-123'): `run_spreadsheet_operation(instruction='Update cell B5 with the value 42', file_path='inventory.xlsx')`",
         "- To log creation: `log_action(action_description='Created spreadsheet abc-123_budget.xlsx with budget categories and formulas.')`",
         "- To analyze a spreadsheet: `analyze_spreadsheet(file_handle='sales_data.xlsx', analysis_config='{...json config...}')` ",
         # ...(rest of instructions remain the same)...
@@ -154,9 +155,9 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         # Spreadsheet tools
         read_file_content,
         create_spreadsheet,
-        modify_spreadsheet,
         analyze_spreadsheet,
         extract_spreadsheet_from_document,
+        run_spreadsheet_operation,
         spreadsheet_analysis_agent.as_tool(
             tool_name="spreadsheet_analysis_specialist",
             tool_description="Perform comprehensive analysis on a spreadsheet and generate a detailed report.",

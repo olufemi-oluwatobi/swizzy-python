@@ -17,7 +17,7 @@ def magic_analyze(file_handle: str, instructions: str) -> Dict[str, Any]:
     
     Args:
         file_handle: The handle of the file to analyze
-        instructions: Analysis requirements and guidance
+        instructions: Analysis requirements and guidancess
     
     Returns:
         Dictionary containing analysis results and report handles
@@ -29,24 +29,24 @@ def magic_analyze(file_handle: str, instructions: str) -> Dict[str, Any]:
         # Initial document analysis prompt
         analysis_prompt = f"""Analyze this document and provide analysis instructions:
         
-Instructions from user: {instructions}
+        Instructions from user: {instructions}
 
-Analyze and determine:
-1. What type of analysis is needed
-2. What data processing steps are required
-3. What insights we should look for
-4. What type of outputs to generate
+        Analyze and determine:
+        1. What type of analysis is needed
+        2. What data processing steps are required
+        3. What insights we should look for
+        4. What type of outputs to generate
 
-Return a structured analysis plan in this format:
-{{
-    "file_type": "type of file and processing needed",
-    "analysis_needs": ["list of analyses needed"],
-    "processing_steps": ["ordered list of steps"],
-    "required_outputs": ["list of outputs to generate"],
-    "script_needed": boolean,
-    "script_instructions": "instructions in plain text if script needed"
-}}
-"""
+        Return a structured analysis plan in this format:
+        {{
+            "file_type": "type of file and processing needed",
+            "analysis_needs": ["list of analyses needed"],
+            "processing_steps": ["ordered list of steps"],
+            "required_outputs": ["list of outputs to generate"],
+            "script_needed": boolean,
+            "script_instructions": "instructions in plain text if script needed"
+        }}
+        """
         # Get initial analysis
         result = gemini.analyze_text(analysis_prompt, "Document Analysis Plan")
         if not result.get("success"):
@@ -93,18 +93,18 @@ Return a structured analysis plan in this format:
         # Generate comprehensive report
         report_prompt = f"""Create a comprehensive analysis report:
 
-Analysis Plan: {json.dumps(analysis_plan, indent=2)}
-Analysis Results: {json.dumps(analysis_results, indent=2)}
-Generated Outputs: {json.dumps(outputs, indent=2)}
+        Analysis Plan: {json.dumps(analysis_plan, indent=2)}
+        Analysis Results: {json.dumps(analysis_results, indent=2)}
+        Generated Outputs: {json.dumps(outputs, indent=2)}
 
-Create a full report in Markdown format that:
-1. Summarizes the analysis performed
-2. Explains key findings
-3. Provides data insights
-4. Lists recommendations
-5. Includes links to generated files
-"""
-        
+        Create a full report in Markdown format that:
+        1. Summarizes the analysis performed
+        2. Explains key findings
+        3. Provides data insights
+        4. Lists recommendations
+        5. Includes links to generated files
+        """
+                
         report_result = gemini.analyze_text(report_prompt, "Generate Analysis Report")
         if not report_result.get("success"):
             raise Exception("Failed to generate report")
@@ -117,14 +117,14 @@ Create a full report in Markdown format that:
         
         # Generate executive summary
         summary_prompt = f"""Create a brief executive summary of this analysis:
-{report_result["text"]}
+        {report_result["text"]}
 
-Focus on:
-1. Key findings
-2. Main insights
-3. Critical recommendations
-Maximum 3 paragraphs.
-"""
+        Focus on:
+        1. Key findings
+        2. Main insights
+        3. Critical recommendations
+        Maximum 3 paragraphs.
+        """
         
         summary_result = gemini.analyze_text(summary_prompt, "Generate Summary")
         if not summary_result.get("success"):
