@@ -151,9 +151,16 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         inspect_context,
         ponder_task,
         log_file_action,  # Log file actions
+        ponder_spreadsheet_request,  # Keep specific pondering tool if needed
         # Spreadsheet tools
         read_file_content,
         create_spreadsheet,
-        analyze_spreadsheet,# Add to tools list
+        analyze_spreadsheet,
+        extract_spreadsheet_from_document,
+        run_spreadsheet_operation,
+        spreadsheet_analysis_agent.as_tool(
+            tool_name="spreadsheet_analysis_specialist",
+            tool_description="Perform comprehensive analysis on a spreadsheet and generate a detailed report.",
+        )  # Add to tools list
     ]
 )
