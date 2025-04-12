@@ -66,6 +66,7 @@ from app.tools.memory_tools import (
 from app.tools.core_tools import ponder_task
 from app.config import STYLE_INSTRUCTIONS
 from app.agents.model_config import gemini_model  # Import shared model config
+from app.agents.spreadsheet_analysis_agent import spreadsheet_analysis_agent
 
 logger = logging.getLogger(__name__)
 
@@ -84,8 +85,8 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
     name="Spreadsheet Specialist",
     instructions=''.join([
         "You are a specialist in dealing with spreadsheets (.xlsx, .csv). Your primary responsibility is to produce high-quality spreadsheet files that meet client requirements. ",
-        "You MUST use the `get_task_id` tool to get the current task ID and prepend it to any filename you create (e.g., `[task_id]_budget.xlsx`). ",
-        "You MUST log significant actions using the `log_action` tool. ",
+        "You MUST use the \`get_task_id\` tool to get the current task ID and prepend it to any filename you create (e.g., \`[task_id]_budget.xlsx\`). ",
+        "You MUST log significant actions using the \`log_action\` tool. ",
         "**CRITICAL: ALWAYS PONDER FIRST!**",
         "Before taking ANY action, you MUST:",
         "1. Use the ponder_task tool to analyze the request",
@@ -104,7 +105,7 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         "- log_action: MUST be called to log pondering and spreadsheet actions.",
         "- ponder_spreadsheet_request: MUST be called FIRST to think through the request ",
         "- read_file_content: Use this to read existing spreadsheet files excel files, csv files etc.",
-        "- create_spreadsheet: Use this to create new spreadsheets (filename MUST be `[task_id]_your_filename.xlsx`).",
+        "- create_spreadsheet: Use this to create new spreadsheets (filename MUST be \`[task_id]_your_filename.xlsx\`).",
         "- modify_spreadsheet: Use this to modify existing spreadsheets ",
         "- analyze_spreadsheet: Use this to perform complex analysis operations on spreadsheets ",
         "- extract_spreadsheet_from_document: Use this to extract spreadsheet data from documents (e.g., PDF), We can read documets and caputree thee table in them ideeal for invoices, bank statments and any job for extracting tables from documents",
@@ -112,7 +113,7 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         "**CRITICAL RULES**: ",
         "1. NEVER skip the pondering step - ALWAYS call ponder_spreadsheet_request first ",
         "2. NEVER skip logging actions - use log_action for pondering and tool use.",
-        "3. **FILENAME FORMAT**: ALWAYS use `get_task_id` and format filenames as `[task_id]_your_filename.ext` when creating files.",
+        "3. **FILENAME FORMAT**: ALWAYS use \`get_task_id\` and format filenames as \`[task_id]_your_filename.ext\` when creating files.",
         "4. NEVER claim to have read, created, or modified a file without ACTUALLY CALLING THE CORRESPONDING TOOL ",
         "5. NEVER make up fake data or pretend to analyze a file you haven't read with the tool unless explicitly told to",
         "6. NEVER tell clients to wait - either complete the task with your tools or report an error ",
@@ -125,14 +126,14 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         "12. You are a master with spreadsheets ie csv excel, data analytics etc, you must operate with a sense of excellence and agency. Fully utilize the tools at your disposal",
         # ...(rest of instructions remain the same)...
          "**EXAMPLES OF PROPER TOOL USAGE**: ",
-        "- To ponder: `ponder_spreadsheet_request(request_description='Create a budget spreadsheet', points_to_consider='Need to determine columns, format, and initial data')` ",
-        "- To log pondering: `log_action(action_description='Pondered request: Determined need for 3 columns (Category, Budget, Actual) and currency formatting.')`",
-        "- To get task ID (example assumes ID is 'abc-123'): `get_task_id()` -> returns 'abc-123'",
-        "- To read a file: `read_file_content(file_handle='sales_data.xlsx')` ",
-        f"- To create a formatted spreadsheet (after getting task_id='abc-123'): `create_spreadsheet(filename='abc-123_budget.xlsx', spreadsheet_data='{{...json data...}}')` ",
-        f"- To modify a spreadsheet: `modify_spreadsheet(file_handle='inventory.xlsx', operations='[{{\"operation\": \"update_cell\", \"cell\": \"B5\", \"value\": \"42\"}}]')` ",
-        "- To log creation: `log_action(action_description='Created spreadsheet abc-123_budget.xlsx with budget categories and formulas.')`",
-        f"- To analyze a spreadsheet: `analyze_spreadsheet(file_handle='sales_data.xlsx', analysis_config='{{...json config...}}')` ",
+        "- To ponder: \`ponder_spreadsheet_request(request_description='Create a budget spreadsheet', points_to_consider='Need to determine columns, format, and initial data')\` ",
+        "- To log pondering: \`log_action(action_description='Pondered request: Determined need for 3 columns (Category, Budget, Actual) and currency formatting.')\`",
+        "- To get task ID (example assumes ID is 'abc-123'): \`get_task_id()\` -> returns 'abc-123'",
+        "- To read a file: \`read_file_content(file_handle='sales_data.xlsx')\` ",
+        f"- To create a formatted spreadsheet (after getting task_id='abc-123'): \`create_spreadsheet(filename='abc-123_budget.xlsx', spreadsheet_data='{{...json data...}}')\` ",
+        f"- To modify a spreadsheet: \`modify_spreadsheet(file_handle='inventory.xlsx', operations='[{{"operation": "update_cell", "cell": "B5", "value": "42"}}]')\` ",
+        "- To log creation: \`log_action(action_description='Created spreadsheet abc-123_budget.xlsx with budget categories and formulas.')\`",
+        f"- To analyze a spreadsheet: \`analyze_spreadsheet(file_handle='sales_data.xlsx', analysis_config='{{...json config...}}')\` ",
         # ...(rest of instructions remain the same)...
         "**IMPORTANT: LOGGING ACTIONS AND DECISIONS**",
         "- ALWAYS log your significant actions and decisions using the log_action tool",
@@ -152,6 +153,10 @@ spreadsheet_agent = Agent[TaskContext](  # <--- Added TaskContext type hint
         create_spreadsheet,
         modify_spreadsheet,
         analyze_spreadsheet,
-        extract_spreadsheet_from_document,  # Add to tools list
+        extract_spreadsheet_from_document,
+        spreadsheet_analysis_agent.as_tool(
+            tool_name="spreadsheet_analysis_specialist",
+            tool_description="Perform comprehensive analysis on a spreadsheet and generate a detailed report.",
+        )  # Add to tools list
     ]
 )
