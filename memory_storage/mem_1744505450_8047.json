@@ -1,0 +1,12 @@
+{
+  "title": "Task Analysis: Excel Gender Separation",
+  "content": "The task is to process an Excel file, separate data by gender into new sheets ('male', 'female'), and delete the original sheets.",
+  "tags": [
+    "excel",
+    "gender separation",
+    "spreadsheet_specialist"
+  ],
+  "summary": "Analysis of the task to separate Excel data by gender.",
+  "links": [],
+  "timestamp": 1744505450.0429637
+}

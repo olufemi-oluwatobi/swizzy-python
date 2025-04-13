@@ -11,7 +11,7 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 # Remove circular import
 # from ..tools.spreadsheet_tools import create_spreadsheet, modify_spreadsheet
-from app.tools.spreadsheet_utils import read_excel_all, write_excel_file, get_excel_bytes
+from app.tools.spreadsheet_utils import read_excel_all, write_excel_file, get_excel_bytes, get_excel_bytes_from_dfs
 import base64
 import docx
 from openpyxl import Workbook, load_workbook
@@ -267,6 +267,7 @@ class ScriptExecutionService:
                 'read_excel_all': read_excel_all,
                 'write_excel_all': write_excel_file,
                 'get_excel_bytes': get_excel_bytes,
+                'get_excel_bytes_from_dfs': get_excel_bytes_from_dfs,
                 'pd': pd,
                 'np': np
             }

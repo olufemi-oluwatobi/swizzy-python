@@ -377,7 +377,6 @@ def magic_enhance_excel(file_handle: str, instructions: str = "") -> Dict[str, A
         'changes_made' list, 'sheets_processed' list, or 'error' message.
     """
     
-
     logger.info(f"Starting magic enhancement for '{file_handle}' with instructions: '{instructions}'")
 
     try:
@@ -393,7 +392,55 @@ You are an AI assistant that generates Python code snippets to modify pandas Dat
 ONLY generate the Python code for the modifications. Do NOT include imports, file reading/writing, function definitions, or the surrounding script structure.
 
 Available variables:
-- `enhanced_df`: copy of the DataFrame to modify
+- `dfs`: dictionary mapping sheet names to DataFrames
+- `all_changes_made`: list to append changes made
+
+
+
+enhanced_sheets = dfs
+
+RULES:
+ - Always write valid pandas code with the data frames in the `dfs` variable,  ensure you apply chaanges to the shet before saving the file
+
+   
+    
+    
+     
+    YOUR SCRIPT MUST USE THE CODE BELOW PPROPRIATELY. TH CODE BELWO WASNNT INCLUDED I YOU
+    # Save results
+    PASS YOUR PROCESSED EXCEL BYTES SHEET TO THE write_excel_all function.
+   
+
+
+```
+
+Example 4 - Combining data manipulation and styling:
+```python
+for sheet_name, df in dfs.items():
+    # First manipulate data
+    if 'Total' in df.columns:
+        df['Total'] = df['Total'] * 1.1  # Increase total by 10%
+        all_changes_made.append(f"Increased Total values by 10% in '{'sheet_name'}'")
+    
+    # Then apply styling to the updated data
+    dfs[sheet_name] = df.style.highlight_max(color='red', axis=0)
+    all_changes_made.append(f"Highlighted maximum values in '{'sheet_name'}'") 
+```
+
+INCORRECT STYLING EXAMPLES (DO NOT DO THESE):
+```python
+# WRONG - using .data after styling
+for sheet_name, df in dfs.items():
+    dfs[sheet_name] = df.style.highlight_max().data  # DON'T use .data!
+
+    V
+```
+
+```python
+# WRONG - not storing the styled DataFrame back in dfs
+for sheet_name, df in dfs.items():
+    styled_df = df.style.highlight_max()  # Styling lost because not saved back to dfs
+```
 
 User Instructions:
 {instructions}
@@ -425,19 +472,20 @@ Sheet samples:
             enhancement_code = match_generic.group(1).strip()
         else:
             enhancement_code = raw_code_response.strip()
-            if not any(kw in enhancement_code for kw in ['pd.', 'df[', 'enhanced_df[', '=', 'if ', 'for ']):
+            if not any(kw in enhancement_code for kw in ['pd.', 'df[', 'dfs[', '=', 'if ', 'for ']):
                 enhancement_code = (
                     "print('AI response did not contain a recognizable Python code block.')\n"
-                    "current_sheet_changes.append('Error: AI failed to generate valid enhancement code.')"
+                    "all_changes_made.append('Error: AI failed to generate valid enhancement code.')"
                 )
 
-        indented_enhancement_code = textwrap.indent(enhancement_code, ' ' * 12)
+        # Important fix: indent at 4 spaces, not 12, to match the try block indentation
+        indented_enhancement_code = textwrap.indent(enhancement_code, ' ' * 4)
 
         script_template = '''
 # Initialize variables
-output = {}
+output = {{}}
 all_changes_made = []
-enhanced_sheets = {}
+enhanced_sheets = {{}}
 
 # Get input data
 input_handle = input_data['input_handle']
@@ -448,23 +496,22 @@ if not sheets_data:
     raise ValueError("No sheets were read from the input file.")
 
 # Create a copy of sheets_data for modifications
-dfs = {name: df.copy() for name, df in sheets_data.items()}
+dfs = {{name: df.copy() for name, df in sheets_data.items()}}
 
 try:
-    # Execute enhancement code
 {0}
 
-    # Update enhanced_sheets with modified DataFrames
-    enhanced_sheets = dfs
+    excel_bytes = get_excel_bytes_from_dfs(dfs)
+    output_handle = write_excel_all(excel_bytes, input_handle)
 
-    # Save results
-    output_handle = write_excel_all(enhanced_sheets, input_handle)
     output = {{
         'output_handle': output_handle,
         'changes_made': all_changes_made,
         'sheets_processed': list(enhanced_sheets.keys())
     }}
+   
 except Exception as e:
+    import traceback
     error_msg = f"Error executing enhancement code: {{str(e)}}\\nTraceback: {{traceback.format_exc()}}"
     print(error_msg)
     all_changes_made.append(f"CRITICAL ERROR: {{str(e)}}")
@@ -517,7 +564,7 @@ except Exception as e:
     except Exception as e:
         logger.exception(f"Unexpected error during magic enhancement: {e}")
         return {"success": False, "error": f"Unexpected error: {str(e)}"}
-
+    
 def _extract_json_from_response(response_text: str) -> dict:
     """Helper function to extract and parse JSON from Gemini response"""
     try:

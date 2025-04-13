@@ -1,0 +1,10 @@
+{
+  "title": "Task analysis: Format Excel header red",
+  "content": "The user wants to format an Excel document and change the header color to red. I need to use the spreadsheet_specialist tool to achieve this. I will instruct the tool to modify the header's background color to red.",
+  "tags": [
+    "swizzy_task_analysis"
+  ],
+  "summary": "Analysis of the task to format an excel sheet header to red",
+  "links": [],
+  "timestamp": 1744500965.8815005
+}
